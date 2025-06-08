@@ -1,9 +1,6 @@
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 
-// user defined
-import 'package:hello/pages/price_page.dart';
-
 class GraphPage extends StatefulWidget {
   const GraphPage({super.key});
 
