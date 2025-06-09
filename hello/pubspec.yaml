@@ -39,6 +39,9 @@ dependencies:
   sqlite3: ^2.1.0 # 이 줄을 추가합니다. (최신 안정 버전을 확인하세요)
   path_provider: ^2.1.3 # 데이터베이스 파일 경로를 얻기 위해 필요합니다.
   path: ^1.9.0 # 경로 조작을 위해 필요합니다.
+  provider: ^6.0.5 # 위젯 트리 아래로 데이터를 전달하고 상태를 관리
+  http: ^1.2.1
+  sqflite: ^2.3.3
 
 dev_dependencies:
   flutter_test:
@@ -50,6 +53,11 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  mockito: ^5.4.4 # 최신 버전 확인 후 사용
+  integration_test:
+    sdk: flutter
+  sqflite_common_ffi: ^2.3.1 # 통합 테스트를 위한 SQLite 인메모리 DB
+  sqflite_common_ffi_web: ^0.4.0 # 웹 환경 지원 (선택 사항)
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

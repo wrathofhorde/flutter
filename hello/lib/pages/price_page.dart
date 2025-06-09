@@ -1,7 +1,9 @@
+import 'package:hello/utils/coin_price_db.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 
 import 'package:hello/pages/graph_page.dart';
+import 'package:provider/provider.dart';
 
 class PricePage extends StatefulWidget {
   const PricePage({super.key});
@@ -12,6 +14,7 @@ class PricePage extends StatefulWidget {
 
 class _PricePageState extends State<PricePage> {
   String _currentDateTitle = "";
+  // final repository = Provider.of<CoinPriceDb>(context, listen: false);
 
   @override
   void initState() {
@@ -33,6 +36,7 @@ class _PricePageState extends State<PricePage> {
       appBar: AppBar(
         title: Text(_currentDateTitle),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        centerTitle: true,
       ),
       body: const Center(
         child: Text('This is the Price Page!', style: TextStyle(fontSize: 24)),
@@ -53,7 +57,7 @@ class _PricePageState extends State<PricePage> {
               },
               child: const Text(
                 'Go to Second Page',
-                style: TextStyle(color: Colors.deepPurple), // 버튼 텍스트 색상
+                style: TextStyle(color: Colors.blueAccent), // 버튼 텍스트 색상
               ),
             ),
           ],
