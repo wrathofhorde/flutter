@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:hello/utils/db_helper.dart';
+import 'package:hello/utils/coin_price_db.dart';
+import 'package:hello/utils/database_helper.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 // user defined
 import 'package:hello/pages/price_page.dart';
@@ -30,10 +32,19 @@ void main() async {
     // 데이터베이스 초기화
     await DatabaseHelper.instance.init();
     debugPrint('DatabaseHelper initialized in main.');
+
+    // Repository 인스턴스는 여기서 생성하여 Provider에 제공할 것
+    final priceDb = CoinPriceDb(DatabaseHelper.instance);
+
+    runApp(
+      Provider<CoinPriceDb>(
+        create: (context) => priceDb, // 생성된 인스턴스를 제공
+        child: const MyApp(),
+      ),
+    );
   } catch (e) {
-    debugPrint('Failed to initialize: $e');
+    debugPrint('Failed to run App: $e');
   }
-  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {

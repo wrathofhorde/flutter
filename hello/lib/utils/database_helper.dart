@@ -29,6 +29,10 @@ class DatabaseHelper {
     return _database!;
   }
 
+  String get dbname {
+    return _dbName;
+  }
+
   // 데이터베이스를 초기화하는 실제 로직
   Future<Database> _initDb() async {
     const String tableName = "major_coins";

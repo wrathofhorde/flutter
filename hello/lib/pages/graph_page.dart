@@ -44,6 +44,7 @@ class _GraphPageState extends State<GraphPage> {
       appBar: AppBar(
         title: Text(_currentDateTitle),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        centerTitle: true,
       ),
       body: Center(
         child: Column(
@@ -85,7 +86,7 @@ class _GraphPageState extends State<GraphPage> {
               },
               child: const Text(
                 'Go Back to Home',
-                style: TextStyle(color: Colors.deepPurple),
+                style: TextStyle(color: Colors.blueAccent),
               ),
             ),
           ],
