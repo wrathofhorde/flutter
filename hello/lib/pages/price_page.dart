@@ -50,10 +50,13 @@ class _PricePageState extends State<PricePage> {
               // TextButton 또는 ElevatedButton 사용
               onPressed: () {
                 // Navigator를 사용하여 새 페이지로 이동
-                Navigator.push(
+                // Navigator.push(
+                //   context,
+                //   MaterialPageRoute(builder: (context) => const GraphPage()),
+                // );
+                Navigator.of(
                   context,
-                  MaterialPageRoute(builder: (context) => const GraphPage()),
-                );
+                ).push(_createSlideRoute(const GraphPage()));
               },
               child: const Text(
                 'Go to Second Page',
@@ -63,6 +66,26 @@ class _PricePageState extends State<PricePage> {
           ],
         ),
       ),
+    );
+  }
+
+  PageRoute _createSlideRoute(Widget page) {
+    return PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionDuration: const Duration(milliseconds: 700),
+      reverseTransitionDuration: const Duration(milliseconds: 500),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        const begin = Offset(1.0, 0.0); // 오른쪽에서 시작 (다음 페이지가 들어올 때)
+        const end = Offset.zero; // 원래 위치로 이동
+        const curve = Curves.ease; // 부드러운 애니메이션 곡선
+
+        var tween = Tween(
+          begin: begin,
+          end: end,
+        ).chain(CurveTween(curve: curve));
+
+        return SlideTransition(position: animation.drive(tween), child: child);
+      },
     );
   }
 }
