@@ -82,7 +82,7 @@ class _GraphPageState extends State<GraphPage> {
             TextButton(
               onPressed: () {
                 // Navigator를 사용하여 이전 페이지로 돌아감
-                Navigator.pop(context);
+                Navigator.of(context).pop();
               },
               child: const Text(
                 'Go Back to Home',
