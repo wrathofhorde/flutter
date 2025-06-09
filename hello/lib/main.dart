@@ -34,7 +34,7 @@ void main() async {
     debugPrint('DatabaseHelper initialized in main.');
 
     // Repository 인스턴스는 여기서 생성하여 Provider에 제공할 것
-    final priceDb = CoinPriceDb(DatabaseHelper.instance);
+    CoinPriceDb priceDb = CoinPriceDb(DatabaseHelper.instance);
 
     runApp(
       Provider<CoinPriceDb>(
@@ -43,7 +43,7 @@ void main() async {
       ),
     );
   } catch (e) {
-    debugPrint('Failed to run App: $e');
+    debugPrint('Fail to init App: $e');
   }
 }
 

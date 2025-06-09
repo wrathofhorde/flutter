@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 class DatabaseHelper {
   static Database? _database; // SQLite 데이터베이스 인스턴스
   static const String _dbName = 'sample_market.sq3'; // 데이터베이스 파일 이름
+  static const String _tableName = "major_coins";
 
   // 싱글톤 인스턴스 (한 번만 생성되도록)
   static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
@@ -18,24 +19,17 @@ class DatabaseHelper {
 
   // 데이터베이스 초기화 및 인스턴스 반환
   Future<Database> get database async {
-    if (_database != null) {
-      debugPrint('Database already initialized.');
-      return _database!;
-    }
-
-    debugPrint('Initializing database...');
-    _database = await _initDb();
-    debugPrint('Database initialized successfully.');
+    // async 키워드 확인
+    _database ??= await _initDb();
     return _database!;
   }
 
-  String get dbname {
-    return _dbName;
+  String get tablename {
+    return _tableName;
   }
 
   // 데이터베이스를 초기화하는 실제 로직
   Future<Database> _initDb() async {
-    const String tableName = "major_coins";
     String currentDirectoryPath = Directory.current.path;
     String path = join(currentDirectoryPath, _dbName);
     debugPrint('Database path: $path');
@@ -46,7 +40,7 @@ class DatabaseHelper {
     // 테이블 생성 쿼리 (예시: user 테이블)
     try {
       db.execute('''
-        CREATE TABLE IF NOT EXISTS $tableName (
+        CREATE TABLE IF NOT EXISTS $_tableName (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           date TEXT UNIQUE,
           btc INTEGER,
@@ -54,7 +48,7 @@ class DatabaseHelper {
           xrp INTEGER
         );
       ''');
-      debugPrint('Table $tableName created or already exists.');
+      debugPrint('Table $_tableName created or already exists.');
     } catch (e) {
       debugPrint('Error creating table: $e');
       rethrow; // 에러를 다시 던져서 호출자에게 알림

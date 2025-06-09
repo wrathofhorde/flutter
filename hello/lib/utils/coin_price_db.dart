@@ -15,7 +15,7 @@ class CoinPriceDb {
   }) async {
     final sql =
         '''
-          INSERT OR IGNORE INTO ${_dbHelper.dbname} 
+          INSERT OR IGNORE INTO ${_dbHelper.tablename} 
           (date, btc, eth, xrp) 
           VALUES (?, ?, ?, ?);
         ''';
@@ -27,7 +27,7 @@ class CoinPriceDb {
     final sql =
         '''
           SELECT date, btc, eth, xrp 
-          FROM ${_dbHelper.dbname} 
+          FROM ${_dbHelper.tablename} 
           ORDER BY date DESC;
         ''';
     final result = await _dbHelper.fetchAll(sql);
@@ -45,7 +45,7 @@ class CoinPriceDb {
     final sql =
         '''
           SELECT date, btc, eth, xrp 
-          FROM ${_dbHelper.dbname} 
+          FROM ${_dbHelper.tablename} 
           WHERE date BETWEEN ? AND ? 
           ORDER BY date DESC;
         ''';
@@ -63,7 +63,7 @@ class CoinPriceDb {
     final sql =
         '''
           SELECT date, btc, eth, xrp 
-          FROM ${_dbHelper.dbname} 
+          FROM ${_dbHelper.tablename} 
           WHERE date = ?;
         ''';
     final result = await _dbHelper.fetchOne(sql, [date]);
