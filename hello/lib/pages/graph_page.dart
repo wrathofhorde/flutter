@@ -79,14 +79,20 @@ class _GraphPageState extends State<GraphPage> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            TextButton(
-              onPressed: () {
-                // Navigator를 사용하여 이전 페이지로 돌아감
-                Navigator.of(context).pop();
-              },
-              child: const Text(
-                'Go Back to Home',
-                style: TextStyle(color: Colors.blueAccent),
+            SizedBox(
+              width: 200,
+              height: 50,
+              child: TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text(
+                  '메인으로 돌아가기',
+                  style: TextStyle(
+                    color: Colors.blueAccent,
+                    fontSize: 18,
+                  ), // 버튼 텍스트 색상
+                ),
               ),
             ),
           ],

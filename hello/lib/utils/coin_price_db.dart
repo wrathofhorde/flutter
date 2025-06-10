@@ -3,9 +3,27 @@ import 'package:hello/model/coin_data.dart';
 import 'package:hello/utils/database_helper.dart';
 
 class CoinPriceDb {
+  final String _tableName;
   final DatabaseHelper _dbHelper;
   // 생성자를 통해 DatabaseHelper 인스턴스를 주입
-  CoinPriceDb(this._dbHelper);
+  CoinPriceDb(this._dbHelper, this._tableName);
+
+  Future<void> createTableIfNotExists() async {
+    debugPrint(_tableName);
+    final sql =
+        '''
+        CREATE TABLE IF NOT EXISTS $_tableName (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          date TEXT UNIQUE,
+          btc INTEGER,
+          eth INTEGER,
+          xrp INTEGER
+      );
+    ''';
+
+    await _dbHelper.execute(sql);
+    debugPrint('Repository: Create table');
+  }
 
   Future<void> insertMajorCoinPrices({
     required String date,
@@ -15,7 +33,7 @@ class CoinPriceDb {
   }) async {
     final sql =
         '''
-          INSERT OR IGNORE INTO ${_dbHelper.tablename} 
+          INSERT OR IGNORE INTO $_tableName 
           (date, btc, eth, xrp) 
           VALUES (?, ?, ?, ?);
         ''';
@@ -27,7 +45,7 @@ class CoinPriceDb {
     final sql =
         '''
           SELECT date, btc, eth, xrp 
-          FROM ${_dbHelper.tablename} 
+          FROM $_tableName 
           ORDER BY date DESC;
         ''';
     final result = await _dbHelper.fetchAll(sql);
@@ -38,14 +56,14 @@ class CoinPriceDb {
     return coinDataList;
   }
 
-  Future<List<CoinData>> getCoinDataByDateRange(
-    String startDate,
-    String endDate,
-  ) async {
+  Future<List<CoinData>> getCoinDataByDateRange({
+    required String startDate,
+    required String endDate,
+  }) async {
     final sql =
         '''
           SELECT date, btc, eth, xrp 
-          FROM ${_dbHelper.tablename} 
+          FROM $_tableName
           WHERE date BETWEEN ? AND ? 
           ORDER BY date DESC;
         ''';
@@ -63,7 +81,7 @@ class CoinPriceDb {
     final sql =
         '''
           SELECT date, btc, eth, xrp 
-          FROM ${_dbHelper.tablename} 
+          FROM $_tableName
           WHERE date = ?;
         ''';
     final result = await _dbHelper.fetchOne(sql, [date]);
@@ -77,9 +95,10 @@ class CoinPriceDb {
   }
 
   Future<String?> getLastUpdatedDate() async {
-    final sql = '''
+    final sql =
+        '''
         SELECT MAX(date) AS last_date 
-        FROM major_coins;
+        FROM $_tableName;
       ''';
     final result = await _dbHelper.fetchOne(sql);
     final String? lastDate = result?['last_date'] as String?;
