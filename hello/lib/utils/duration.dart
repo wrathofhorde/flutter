@@ -61,6 +61,14 @@ class Days {
     return formatter.format(_lastUpdateDay);
   }
 
+  set updateLastUpdateDay(String newDateString) {
+    _lastUpdateDay = DateTime.parse(newDateString);
+  }
+
+  set updateLastUpdateDayAsDateTime(DateTime newDateTime) {
+    _lastUpdateDay = newDateTime;
+  }
+
   void print() {
     final formatter = DateFormat(_dateFormat);
 

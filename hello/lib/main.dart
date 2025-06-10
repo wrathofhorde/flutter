@@ -4,6 +4,7 @@ import 'package:hello/utils/coin_price_db.dart';
 import 'package:hello/utils/database_helper.dart';
 import 'package:hello/utils/duration.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:path/path.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 // user defined
@@ -35,34 +36,19 @@ void main() async {
 
     // 데이터베이스 초기화
     await DatabaseHelper.instance.init(dbname);
+    final CoinPriceDb priceDb = CoinPriceDb(DatabaseHelper.instance, tablename);
+    priceDb.createTableIfNotExists();
     debugPrint('DatabaseHelper initialized in main.');
 
-    // Repository 인스턴스는 여기서 생성하여 Provider에 제공할 것
-    CoinPriceDb priceDb = CoinPriceDb(DatabaseHelper.instance, tablename);
-    priceDb.createTableIfNotExists();
-    await priceDb.insertMajorCoinPrices(
-      date: "2025-06-04",
-      btc: 150000000,
-      eth: 5000000,
-      xrp: 4000,
-    );
-
     String? lastUpdateDay = await priceDb.getLastUpdatedDate();
-
-    List<CoinData> prices = await priceDb.getCoinDataByDateRange(
-      startDate: "2025-06-01",
-      endDate: "2025-06-08",
-    );
-    for (var price in prices) {
-      debugPrint(price.toString());
-    }
-
-    Days days = Days(lastUpdateDay);
-    days.print();
+    final Days days = Days(lastUpdateDay);
 
     runApp(
-      Provider<CoinPriceDb>(
-        create: (context) => priceDb, // 생성된 인스턴스를 제공
+      MultiProvider(
+        providers: [
+          Provider<Days>(create: (context) => days),
+          Provider<CoinPriceDb>(create: (context) => priceDb),
+        ],
         child: const MyApp(),
       ),
     );
