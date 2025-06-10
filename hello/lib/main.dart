@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:hello/model/coin_data.dart';
 import 'package:hello/utils/coin_price_db.dart';
 import 'package:hello/utils/database_helper.dart';
+import 'package:hello/utils/duration.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
@@ -8,6 +10,8 @@ import 'package:window_manager/window_manager.dart';
 import 'package:hello/pages/price_page.dart';
 
 void main() async {
+  final String dbname = "sample_market.sq3";
+  final String tablename = "major_coins";
   try {
     const windowSize = Size(1024, 720);
     WidgetsFlutterBinding.ensureInitialized(); // Flutter 엔진 초기화 보장
@@ -30,11 +34,31 @@ void main() async {
     await initializeDateFormatting('ko_KR', null); // 한국어 로케일 데이터 초기화
 
     // 데이터베이스 초기화
-    await DatabaseHelper.instance.init();
+    await DatabaseHelper.instance.init(dbname);
     debugPrint('DatabaseHelper initialized in main.');
 
     // Repository 인스턴스는 여기서 생성하여 Provider에 제공할 것
-    CoinPriceDb priceDb = CoinPriceDb(DatabaseHelper.instance);
+    CoinPriceDb priceDb = CoinPriceDb(DatabaseHelper.instance, tablename);
+    priceDb.createTableIfNotExists();
+    await priceDb.insertMajorCoinPrices(
+      date: "2025-06-04",
+      btc: 150000000,
+      eth: 5000000,
+      xrp: 4000,
+    );
+
+    String? lastUpdateDay = await priceDb.getLastUpdatedDate();
+
+    List<CoinData> prices = await priceDb.getCoinDataByDateRange(
+      startDate: "2025-06-01",
+      endDate: "2025-06-08",
+    );
+    for (var price in prices) {
+      debugPrint(price.toString());
+    }
+
+    Days days = Days(lastUpdateDay);
+    days.print();
 
     runApp(
       Provider<CoinPriceDb>(

@@ -4,16 +4,16 @@ import 'package:sqlite3/sqlite3.dart';
 import 'package:flutter/foundation.dart';
 
 class DatabaseHelper {
+  static String? _dbName; // 데이터베이스 파일 이름
   static Database? _database; // SQLite 데이터베이스 인스턴스
-  static const String _dbName = 'sample_market.sq3'; // 데이터베이스 파일 이름
-  static const String _tableName = "major_coins";
 
   // 싱글톤 인스턴스 (한 번만 생성되도록)
   static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
   DatabaseHelper._privateConstructor();
 
   // init 메소드 (데이터베이스 인스턴스를 얻기 위한 공개 API)
-  Future<Database> init() async {
+  Future<Database> init(String dbname) async {
+    _dbName = dbname;
     return await database;
   }
 
@@ -24,36 +24,13 @@ class DatabaseHelper {
     return _database!;
   }
 
-  String get tablename {
-    return _tableName;
-  }
-
   // 데이터베이스를 초기화하는 실제 로직
   Future<Database> _initDb() async {
     String currentDirectoryPath = Directory.current.path;
     String path = join(currentDirectoryPath, _dbName);
     debugPrint('Database path: $path');
 
-    // 데이터베이스를 열거나 생성합니다.
-    final db = sqlite3.open(path);
-
-    // 테이블 생성 쿼리 (예시: user 테이블)
-    try {
-      db.execute('''
-        CREATE TABLE IF NOT EXISTS $_tableName (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          date TEXT UNIQUE,
-          btc INTEGER,
-          eth INTEGER,
-          xrp INTEGER
-        );
-      ''');
-      debugPrint('Table $_tableName created or already exists.');
-    } catch (e) {
-      debugPrint('Error creating table: $e');
-      rethrow; // 에러를 다시 던져서 호출자에게 알림
-    }
-    return db;
+    return sqlite3.open(path);
   }
 
   // INSERT, UPDATE, DELETE와 같이 결과를 반환하지 않는 쿼리 실행

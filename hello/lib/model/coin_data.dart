@@ -30,6 +30,10 @@ class CoinData {
     return {'id': id, 'date': date, 'btc': btc, 'eth': eth, 'xrp': xrp};
   }
 
+  List<dynamic> toList() {
+    return [date, btc, eth, xrp];
+  }
+
   @override
   String toString() {
     return 'date: $date, btc: $btc, eth: $eth, xrp: $xrp';
