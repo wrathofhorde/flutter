@@ -3,8 +3,14 @@ import 'package:hello/model/coin_data.dart';
 import 'package:hello/utils/database_helper.dart';
 
 class CoinPriceDb {
+  final _columnId = "id";
+  final _columnBtc = "btc";
+  final _columnEth = "eth";
+  final _columnXrp = "xrp";
+  final _columnDate = "date";
   final String _tableName;
   final DatabaseHelper _dbHelper;
+
   // 생성자를 통해 DatabaseHelper 인스턴스를 주입
   CoinPriceDb(this._dbHelper, this._tableName);
 
@@ -12,14 +18,14 @@ class CoinPriceDb {
     debugPrint(_tableName);
     final sql =
         '''
-        CREATE TABLE IF NOT EXISTS $_tableName (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          date TEXT UNIQUE,
-          btc INTEGER,
-          eth INTEGER,
-          xrp INTEGER
-      );
-    ''';
+          CREATE TABLE IF NOT EXISTS $_tableName (
+            $_columnId INTEGER PRIMARY KEY AUTOINCREMENT,
+            $_columnDate TEXT UNIQUE,
+            $_columnBtc INTEGER,
+            $_columnEth INTEGER,
+            $_columnXrp INTEGER
+          );
+        ''';
 
     await _dbHelper.execute(sql);
     debugPrint('Repository: Create table');
@@ -34,7 +40,7 @@ class CoinPriceDb {
     final sql =
         '''
           INSERT OR IGNORE INTO $_tableName 
-          (date, btc, eth, xrp) 
+          ($_columnDate, $_columnBtc, $_columnEth, $_columnXrp) 
           VALUES (?, ?, ?, ?);
         ''';
     await _dbHelper.execute(sql, [date, btc, eth, xrp]);
@@ -44,7 +50,7 @@ class CoinPriceDb {
   Future<List<CoinData>> getAllCoinData() async {
     final sql =
         '''
-          SELECT date, btc, eth, xrp 
+          SELECT $_columnDate, $_columnBtc, $_columnEth, $_columnXrp 
           FROM $_tableName 
           ORDER BY date DESC;
         ''';
@@ -62,10 +68,10 @@ class CoinPriceDb {
   }) async {
     final sql =
         '''
-          SELECT date, btc, eth, xrp 
+          SELECT $_columnDate, $_columnBtc, $_columnEth, $_columnXrp 
           FROM $_tableName
-          WHERE date BETWEEN ? AND ? 
-          ORDER BY date DESC;
+          WHERE $_columnDate BETWEEN ? AND ? 
+          ORDER BY $_columnDate DESC;
         ''';
     final result = await _dbHelper.fetchAll(sql, [startDate, endDate]);
     final List<CoinData> coinDataList = result
@@ -80,9 +86,9 @@ class CoinPriceDb {
   Future<CoinData?> getCoinDataByDate(String date) async {
     final sql =
         '''
-          SELECT date, btc, eth, xrp 
+          SELECT $_columnDate, $_columnBtc, $_columnEth, $_columnXrp 
           FROM $_tableName
-          WHERE date = ?;
+          WHERE $_columnDate = ?;
         ''';
     final result = await _dbHelper.fetchOne(sql, [date]);
     if (result != null) {
@@ -97,9 +103,9 @@ class CoinPriceDb {
   Future<String?> getLastUpdatedDate() async {
     final sql =
         '''
-        SELECT MAX(date) AS last_date 
-        FROM $_tableName;
-      ''';
+          SELECT MAX($_columnDate) AS last_date 
+          FROM $_tableName;
+        ''';
     final result = await _dbHelper.fetchOne(sql);
     final String? lastDate = result?['last_date'] as String?;
     debugPrint('Repository: Last updated date: $lastDate');
