@@ -54,6 +54,6 @@ class CoinData {
 
   @override
   String toString() {
-    return '날짜: $date, BTC: $fbtc KRW, ETH: $feth KRW, XRP: $fxrp KRW';
+    return '$date - BTC: $fbtc KRW, ETH: $feth KRW, XRP: $fxrp KRW';
   }
 }
