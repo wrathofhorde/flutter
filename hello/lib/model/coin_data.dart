@@ -1,5 +1,7 @@
 // lib/models/coin_data.dart
 
+import 'package:intl/intl.dart';
+
 class CoinData {
   final int? id;
   final String date;
@@ -34,8 +36,24 @@ class CoinData {
     return [date, btc, eth, xrp];
   }
 
+  NumberFormat get numberFormatter {
+    return NumberFormat('#,###');
+  }
+
+  String get fbtc {
+    return numberFormatter.format(btc);
+  }
+
+  String get feth {
+    return numberFormatter.format(eth);
+  }
+
+  String get fxrp {
+    return numberFormatter.format(xrp);
+  }
+
   @override
   String toString() {
-    return 'date: $date, btc: $btc, eth: $eth, xrp: $xrp';
+    return '날짜: $date, BTC: $fbtc KRW, ETH: $feth KRW, XRP: $fxrp KRW';
   }
 }
