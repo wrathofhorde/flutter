@@ -1,21 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:hello/model/coin_data.dart';
 import 'package:hello/utils/coin_price_db.dart';
 import 'package:hello/utils/database_helper.dart';
 import 'package:hello/utils/duration.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:path/path.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 // user defined
 import 'package:hello/pages/price_page.dart';
 
-void main() async {
-  final String dbname = "sample_market.sq3";
+Future<void> main() async {
+  // Flutter 엔진과 위젯 바인딩이 초기화되도록 보장
+  // runApp() 이전에 비동기 작업을 수행할 때 필수
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final String dbname = "market.sq3";
   final String tablename = "major_coins";
   try {
     const windowSize = Size(1024, 720);
-    WidgetsFlutterBinding.ensureInitialized(); // Flutter 엔진 초기화 보장
     await windowManager.ensureInitialized();
 
     WindowOptions windowOptions = const WindowOptions(
@@ -36,12 +37,15 @@ void main() async {
 
     // 데이터베이스 초기화
     await DatabaseHelper.instance.init(dbname);
-    final CoinPriceDb priceDb = CoinPriceDb(DatabaseHelper.instance, tablename);
-    priceDb.createTableIfNotExists();
     debugPrint('DatabaseHelper initialized in main.');
+    final CoinPriceDb priceDb = CoinPriceDb(DatabaseHelper.instance, tablename);
+    await priceDb.createTableIfNotExists();
+    debugPrint('CoinPriceDb initialized in main.');
 
     String? lastUpdateDay = await priceDb.getLastUpdatedDate();
+    debugPrint('Last update day fetched: $lastUpdateDay');
     final Days days = Days(lastUpdateDay);
+    debugPrint(days.toString());
 
     runApp(
       MultiProvider(
@@ -67,7 +71,7 @@ class MyApp extends StatelessWidget {
       title: 'Flutter Demo',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color.fromARGB(255, 2, 43, 65),
+          seedColor: const Color.fromARGB(255, 24, 45, 59),
         ),
       ),
       home: const PricePage(),

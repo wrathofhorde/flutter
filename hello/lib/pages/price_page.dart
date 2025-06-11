@@ -1,4 +1,7 @@
+import 'package:hello/model/coin_data.dart';
+import 'package:hello/utils/closing_price.dart';
 import 'package:hello/utils/coin_price_db.dart';
+import 'package:hello/utils/duration.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 
@@ -13,54 +16,81 @@ class PricePage extends StatefulWidget {
 }
 
 class _PricePageState extends State<PricePage> {
-  String _currentDateTitle = "";
+  bool _hasFetchedData = false;
   String _apiDataDisplay = "";
-  // final repository = Provider.of<CoinPriceDb>(context, listen: false);
+  String _currentDateTitle = "";
+
+  late final Days _days;
+  late final CoinPriceDb _priceDb;
+  late final ClosePrice _closePriceFetcher;
 
   @override
   void initState() {
     super.initState();
     _updateDateTitle();
-    _apiDataDisplay = "가격 정보를 로딩 중입니다...\n";
-    _apiDataDisplay += "비트코인: 70,000,000원\n";
-    _apiDataDisplay += "이더리움: 4,000,000원\n";
-    _apiDataDisplay += "리플: 700원\n";
-    _apiDataDisplay += "도지코인: 200원\n";
-    _apiDataDisplay += "솔라나: 200,000원\n";
-    _apiDataDisplay += "에이다: 800원\n";
-    _apiDataDisplay += "체인링크: 25,000원\n";
-    _apiDataDisplay += "폴카닷: 10,000원\n";
-    _apiDataDisplay += "시바: 0.03원\n";
-    _apiDataDisplay += "테조스: 3,000원\n";
-    _apiDataDisplay += "라이트코인: 100,000원\n";
-    _apiDataDisplay += "비트코인 캐시: 500,000원\n";
-    _apiDataDisplay += "모네로: 200,000원\n";
-    _apiDataDisplay += "이더리움 클래식: 40,000원\n";
-    _apiDataDisplay += "네오: 15,000원\n";
-    _apiDataDisplay += "퀀텀: 5,000원\n";
-    _apiDataDisplay += "아이오타: 500원\n";
-    _apiDataDisplay += "웨이브즈: 4,000원\n";
-    _apiDataDisplay += "카르다노: 800원\n";
-    _apiDataDisplay += "트론: 150원\n";
-    _apiDataDisplay += "이오스: 1,000원\n";
-    _apiDataDisplay += "스텔라 루멘: 200원\n";
-    _apiDataDisplay += "아톰: 12,000원\n";
-    _apiDataDisplay += "유니스왑: 10,000원\n";
-    _apiDataDisplay += "링크: 25,000원\n";
-    _apiDataDisplay += "도미노: 50,000원\n";
-    _apiDataDisplay += "팬텀: 1,500원\n";
-    _apiDataDisplay += "코스모스: 12,000원\n";
-    _apiDataDisplay += "아발란체: 30,000원\n";
-    _apiDataDisplay += "솔라나: 200,000원\n";
-    _apiDataDisplay += "루나: 1,000,000원\n";
+    _closePriceFetcher = ClosePrice();
+    _apiDataDisplay = "저장된 가격 정보를 불러오는 중입니다...\n";
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_hasFetchedData) {
+      _days = Provider.of<Days>(context, listen: false);
+      _priceDb = Provider.of<CoinPriceDb>(context, listen: false);
+      _fetchAndDisplayPrices(); // 비동기 함수 호출 시작
+      _hasFetchedData = true; // 플래그 설정
+    }
   }
 
   void _updateDateTitle() {
     final now = DateTime.now();
-    final formatter = DateFormat('yyyy년 MM월 dd일 EEEE', 'ko_KR');
+    final formatter = DateFormat('yyyy년 M월 d일(E)', 'ko_KR');
+    // final formatter = DateFormat('yyyy년 MM월 dd일 EEEE', 'ko_KR');
     setState(() {
       _currentDateTitle = formatter.format(now);
     });
+  }
+
+  Future<void> _fetchAndDisplayPrices() async {
+    final formatter = _days.dateFormatter;
+
+    setState(() {
+      _apiDataDisplay += "서버에서 가격 정보를 가져오는 중...\n";
+    });
+
+    try {
+      DateTime updateDay = _days.updateStartDay;
+      final Duration oneDay = Duration(days: 1);
+      final DateTime updateEndDay = _days.updateEndDay;
+
+      while (updateDay.isBefore(updateEndDay) ||
+          updateDay.isAtSameMomentAs(updateEndDay)) {
+        debugPrint('현재 처리 중인 날짜: ${formatter.format(updateDay)}');
+
+        final date = formatter.format(updateDay);
+        final [btc, eth, xrp] = await _closePriceFetcher.getTradePricesForDay(
+          date,
+        );
+        final coindata = CoinData(date: date, btc: btc, eth: eth, xrp: xrp);
+
+        setState(() {
+          _apiDataDisplay += "$coindata\n";
+        });
+
+        updateDay = updateDay.add(oneDay);
+      }
+
+      setState(() {
+        _apiDataDisplay += "모든 날짜 정보 로딩 완료!\n";
+      });
+    } catch (e) {
+      setState(() {
+        _apiDataDisplay = "가격 정보를 불러오는 데 실패했습니다: $e\n";
+        _apiDataDisplay += "인터넷 연결을 확인하거나 잠시 후 다시 시도해 주세요.";
+      });
+      debugPrint('API 호출 중 오류 발생: $e');
+    }
   }
 
   @override
@@ -77,7 +107,7 @@ class _PricePageState extends State<PricePage> {
           crossAxisAlignment: CrossAxisAlignment.stretch, // 자식 위젯을 가로로 최대한 늘림
           children: [
             const Text(
-              '실시간 가격 정보', // 제목을 좀 더 명확하게 변경
+              '코인 가격 정보 업데이트', // 제목을 좀 더 명확하게 변경
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
@@ -127,7 +157,7 @@ class _PricePageState extends State<PricePage> {
                   ).push(_createSlideRoute(const GraphPage()));
                 },
                 child: const Text(
-                  '결과 보기',
+                  '가격 정보 보기',
                   style: TextStyle(
                     color: Colors.blueAccent,
                     fontSize: 18,

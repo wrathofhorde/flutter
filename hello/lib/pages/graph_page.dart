@@ -1,5 +1,8 @@
+import 'package:hello/utils/coin_price_db.dart';
+import 'package:hello/utils/duration.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class GraphPage extends StatefulWidget {
   const GraphPage({super.key});
@@ -10,7 +13,11 @@ class GraphPage extends StatefulWidget {
 
 class _GraphPageState extends State<GraphPage> {
   int _counter = 0;
+  bool _hasFetchedData = false;
   String _currentDateTitle = "";
+  late final Days _days;
+  late final CoinPriceDb _priceDb;
+  final _formatter = DateFormat('yyyy년 M월 d일(E)', 'ko_KR');
 
   @override
   void initState() {
@@ -18,11 +25,22 @@ class _GraphPageState extends State<GraphPage> {
     _updateDateTitle();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_hasFetchedData) {
+      _days = Provider.of<Days>(context, listen: false);
+      _priceDb = Provider.of<CoinPriceDb>(context, listen: false);
+      _fetchAndDisplayPrices();
+      _hasFetchedData = true;
+    }
+  }
+
   void _updateDateTitle() {
     final now = DateTime.now();
-    final formatter = DateFormat('yyyy년 MM월 dd일 EEEE', 'ko_KR');
+
     setState(() {
-      _currentDateTitle = formatter.format(now);
+      _currentDateTitle = _formatter.format(now);
     });
   }
 
@@ -35,6 +53,12 @@ class _GraphPageState extends State<GraphPage> {
   void _decrementCounter() {
     setState(() {
       _counter--;
+    });
+  }
+
+  Future<void> _fetchAndDisplayPrices() async {
+    setState(() {
+      _currentDateTitle = '${_days.startDay}~${_days.endDay} 주요 코인 가격';
     });
   }
 
