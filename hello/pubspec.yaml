@@ -99,3 +99,8 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+  fonts:
+    - family: Cascadia Code
+      fonts:
+        - asset: fonts/CascadiaCode-Regular.ttf # 실제 파일 경로에 맞게 수정
+        - asset: fonts/CascadiaCode-SemiBold.ttf # 여러 굵기를 사용하려면 추가

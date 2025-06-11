@@ -129,7 +129,7 @@ class _PricePageState extends State<PricePage> {
                       _apiDataDisplay, // _apiDataDisplay 변수 사용
                       style: const TextStyle(
                         fontSize: 15,
-                        fontFamily: 'monospace', // 가독성을 위해 고정폭 폰트 추천
+                        fontFamily: 'Cascadia Code', // 가독성을 위해 고정폭 폰트 추천
                         height: 1.5, // 줄 간격 조절
                       ),
                     ),
