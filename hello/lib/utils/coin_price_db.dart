@@ -47,6 +47,20 @@ class CoinPriceDb {
     debugPrint('Repository: Inserted coin data for $date');
   }
 
+  Future<void> bulkInsertMajorCoinPrices({
+    required List<List<dynamic>> params,
+  }) async {
+    final sql =
+        '''
+      INSERT OR IGNORE INTO $_tableName
+      ($_columnDate, $_columnBtc, $_columnEth, $_columnXrp)
+      VALUES (?, ?, ?, ?);
+      ''';
+
+    await _dbHelper.executeMany(sql, params);
+    debugPrint('Repository: Bulk inserted ${params.length} coin data entries.');
+  }
+
   Future<List<CoinData>> getAllCoinData() async {
     final sql =
         '''
@@ -110,5 +124,47 @@ class CoinPriceDb {
     final String? lastDate = result?['last_date'] as String?;
     debugPrint('Repository: Last updated date: $lastDate');
     return lastDate;
+  }
+
+  Future<Map<String, dynamic>> getAggregatedCoinPrices({
+    required String startDate,
+    required String endDate,
+  }) async {
+    final sql =
+        '''
+        SELECT
+            AVG($_columnBtc) AS avg_btc, MAX($_columnBtc) AS max_btc, MIN($_columnBtc) AS min_btc,
+            AVG($_columnEth) AS avg_eth, MAX($_columnEth) AS max_eth, MIN($_columnEth) AS min_eth,
+            AVG($_columnXrp) AS avg_xrp, MAX($_columnXrp) AS max_xrp, MIN($_columnXrp) AS min_xrp
+        FROM $_tableName
+        WHERE $_columnDate BETWEEN ? AND ?;
+        '''; // ORDER BY는 단일 결과에는 필요 없음
+
+    final result = await _dbHelper.fetchOne(sql, [startDate, endDate]);
+
+    if (result != null) {
+      return {
+        'btc': {
+          'avg': (result['avg_btc'].round() as int?) ?? 0,
+          'max': (result['max_btc'] as int?) ?? 0,
+          'min': (result['min_btc'] as int?) ?? 0,
+        },
+        'eth': {
+          'avg': (result['avg_eth'].round() as int?) ?? 0,
+          'max': (result['max_eth'] as int?) ?? 0,
+          'min': (result['min_eth'] as int?) ?? 0,
+        },
+        'xrp': {
+          'avg': (result['avg_xrp'].round() as int?) ?? 0,
+          'max': (result['max_xrp'] as int?) ?? 0,
+          'min': (result['min_xrp'] as int?) ?? 0,
+        },
+      };
+    }
+    return {
+      'btc': {'avg': 0, 'max': 0, 'min': 0},
+      'eth': {'avg': 0, 'max': 0, 'min': 0},
+      'xrp': {'avg': 0, 'max': 0, 'min': 0},
+    };
   }
 }
