@@ -1,12 +1,12 @@
+import 'package:intl/intl.dart';
+import 'package:flutter/material.dart';
+import 'package:hello/utils/duration.dart';
 import 'package:hello/model/coin_data.dart';
 import 'package:hello/utils/closing_price.dart';
 import 'package:hello/utils/coin_price_db.dart';
-import 'package:hello/utils/duration.dart';
-import 'package:intl/intl.dart';
-import 'package:flutter/material.dart';
 
-import 'package:hello/pages/graph_page.dart';
 import 'package:provider/provider.dart';
+import 'package:hello/pages/graph_page.dart';
 
 class PricePage extends StatefulWidget {
   const PricePage({super.key});
@@ -38,7 +38,14 @@ class _PricePageState extends State<PricePage> {
     if (!_hasFetchedData) {
       _days = Provider.of<Days>(context, listen: false);
       _priceDb = Provider.of<CoinPriceDb>(context, listen: false);
-      _fetchAndDisplayPrices(); // 비동기 함수 호출 시작
+      if (_days.lastUpdateDay == _days.yesterday) {
+        setState(() {
+          _apiDataDisplay += '최신 데이터로 업데이트 되어 있습니다.\n';
+          _apiDataDisplay += '"가격 정보 보기" 페이지에서 직전달 1년 평균가를 확인할 수 있습니다.\n';
+        });
+      } else {
+        _fetchAndDisplayPrices(); // 비동기 함수 호출 시작
+      }
       _hasFetchedData = true; // 플래그 설정
     }
   }
@@ -56,10 +63,11 @@ class _PricePageState extends State<PricePage> {
     final formatter = _days.dateFormatter;
 
     setState(() {
-      _apiDataDisplay += "서버에서 가격 정보를 가져오는 중...\n";
+      _apiDataDisplay += "서버에서 주요 코인 가격 정보를 가져오는 중...\n";
     });
 
     try {
+      List<List<dynamic>> coinPirces = [];
       DateTime updateDay = _days.updateStartDay;
       final Duration oneDay = Duration(days: 1);
       final DateTime updateEndDay = _days.updateEndDay;
@@ -78,11 +86,18 @@ class _PricePageState extends State<PricePage> {
           _apiDataDisplay += "$coindata\n";
         });
 
+        coinPirces.add(coindata.toList());
         updateDay = updateDay.add(oneDay);
       }
 
       setState(() {
-        _apiDataDisplay += "모든 날짜 정보 로딩 완료!\n";
+        _apiDataDisplay += "주요 코인 가격 정보 저장 중...\n";
+      });
+
+      _priceDb.bulkInsertMajorCoinPrices(params: coinPirces);
+      setState(() {
+        _apiDataDisplay += '주요 코인 가격 정보 저장이 완료되었습니다.\n';
+        _apiDataDisplay += '"가격 정보 보기" 페이지에서 확인할 수 있습니다.';
       });
     } catch (e) {
       setState(() {
@@ -108,10 +123,10 @@ class _PricePageState extends State<PricePage> {
           children: [
             const Text(
               '코인 가격 정보 업데이트', // 제목을 좀 더 명확하게 변경
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 10),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -137,7 +152,7 @@ class _PricePageState extends State<PricePage> {
                 ),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 10),
             // 다른 위젯들이 있다면 여기에 추가될 수 있습니다.
           ],
         ),
@@ -150,18 +165,22 @@ class _PricePageState extends State<PricePage> {
             SizedBox(
               width: 200,
               height: 50,
-              child: TextButton(
-                onPressed: () {
-                  Navigator.of(
-                    context,
-                  ).push(_createSlideRoute(const GraphPage()));
-                },
-                child: const Text(
-                  '가격 정보 보기',
-                  style: TextStyle(
-                    color: Colors.blueAccent,
-                    fontSize: 18,
-                  ), // 버튼 텍스트 색상
+              child: Tooltip(
+                // Tooltip 위젯 추가
+                message: '코인 가격 그래프, 직전 달 일년 평균 가격을 확인합니다.',
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.of(
+                      context,
+                    ).push(_createSlideRoute(const GraphPage()));
+                  },
+                  child: const Text(
+                    '가격 정보 보기',
+                    style: TextStyle(
+                      color: Colors.blueAccent,
+                      fontSize: 18,
+                    ), // 버튼 텍스트 색상
+                  ),
                 ),
               ),
             ),

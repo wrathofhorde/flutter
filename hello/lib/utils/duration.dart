@@ -1,6 +1,5 @@
-import 'package:flutter/material.dart'; // debugPrint를 위해 필요
-import 'package:intl/intl.dart';
 import 'dart:developer'; // log 함수를 위해 추가
+import 'package:intl/intl.dart';
 
 class Days {
   static const String _dateFormat = 'yyyy-MM-dd';
@@ -46,7 +45,7 @@ class Days {
   String get yesterday => dateFormatter.format(_yesterday);
   String get startDay => dateFormatter.format(_firstDayOfLastYear);
   String get endDay => dateFormatter.format(_lastDayOfPreviousMonth);
-  String get recentUpdateDay => dateFormatter.format(_lastUpdateDay);
+  String get lastUpdateDay => dateFormatter.format(_lastUpdateDay);
 
   DateTime get updateStartDay => _lastUpdateDay.add(const Duration(days: 1));
   DateTime get updateEndDay => _yesterday;
