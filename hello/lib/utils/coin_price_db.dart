@@ -85,7 +85,7 @@ class CoinPriceDb {
           SELECT $_columnDate, $_columnBtc, $_columnEth, $_columnXrp 
           FROM $_tableName
           WHERE $_columnDate BETWEEN ? AND ? 
-          ORDER BY $_columnDate DESC;
+          ORDER BY $_columnDate ASC;
         ''';
     final result = await _dbHelper.fetchAll(sql, [startDate, endDate]);
     final List<CoinData> coinDataList = result

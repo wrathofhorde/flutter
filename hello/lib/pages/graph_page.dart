@@ -67,6 +67,9 @@ class _GraphPageState extends State<GraphPage> {
         _dailyCoinData = dailyData; // 일별 데이터 저장
         _yearAggregatedData = yearAggregatedData; // 연간 집계 데이터 저장
       });
+      for (var price in dailyData) {
+        debugPrint(price.toString());
+      }
     } catch (e) {
       debugPrint('데이터 불러오기 중 오류 발생: $e');
       setState(() {
@@ -97,20 +100,40 @@ class _GraphPageState extends State<GraphPage> {
 
     // 2. CSV 데이터 준비
     List<List<dynamic>> csvData = [];
+
     // 헤더 추가
-    csvData.add(['날짜', 'BTC 종가', 'ETH 종가', 'XRP 종가']);
+    csvData.add(['Date', 'BTC', 'ETH', 'XRP']);
+
+    // 평균가 추가
+    final avgBtc = _yearAggregatedData?['btc']['avg'];
+    final avgEth = _yearAggregatedData?['eth']['avg'];
+    final avgXrp = _yearAggregatedData?['xrp']['avg'];
+    csvData.add(["Average", avgBtc, avgEth, avgXrp]);
+
     // 데이터 추가
     for (var data in _dailyCoinData) {
-      csvData.add([data.date, data.btc, data.eth, data.xrp]);
+      csvData.add(data.toList());
     }
 
     // 3. CSV 문자열로 변환
+    // 3. CSV 문자열로 변환 (구분자 탭으로 변경)
     String csvString = const ListToCsvConverter().convert(csvData);
 
     // 4. 파일 경로 설정 및 저장
     try {
       final directory = await getApplicationDocumentsDirectory();
-      final path = '${directory.path}/coin_daily_prices.csv';
+      final subDirectory = 'coin prices';
+
+      // 서브 디렉터리 경로 생성
+      final targetDirectory = Directory('${directory.path}/$subDirectory');
+
+      // 서브 디렉터리가 없으면 생성 (recursive: true로 중간 경로도 함께 생성)
+      if (!await targetDirectory.exists()) {
+        await targetDirectory.create(recursive: true);
+      }
+
+      final filename = '${_days.startDay}-${_days.endDay}.csv';
+      final path = '${targetDirectory.path}/$filename'; // 수정된 경로 사용
       final file = File(path);
       await file.writeAsString(csvString);
 
@@ -128,6 +151,8 @@ class _GraphPageState extends State<GraphPage> {
 
   @override
   Widget build(BuildContext context) {
+    const double subtitleFontSize = 18;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(_currentDateTitle),
@@ -153,7 +178,7 @@ class _GraphPageState extends State<GraphPage> {
                 Text(
                   '${_days.startDay} ~ ${_days.endDay} 평균가, 최고가, 최저가',
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: subtitleFontSize,
                     fontWeight: FontWeight.bold,
                   ),
                   textAlign: TextAlign.center,
@@ -208,7 +233,10 @@ class _GraphPageState extends State<GraphPage> {
                 // --- 2. 코인별 그래프 섹션 ---
                 const Text(
                   '코인별 1년 종가 변화',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: subtitleFontSize,
+                    fontWeight: FontWeight.bold,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 10),
@@ -253,28 +281,31 @@ class _GraphPageState extends State<GraphPage> {
         ),
       ),
       // !!! 원래 페이지로 돌아갈 버튼 추가 !!!
-      bottomNavigationBar: BottomAppBar(
-        color: Theme.of(context).colorScheme.primaryContainer,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: 200,
-              height: 50,
-              child: TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: const Text(
-                  '메인으로 돌아가기',
-                  style: TextStyle(
-                    color: Colors.blueAccent,
-                    fontSize: 18,
-                  ), // 버튼 텍스트 색상
+      bottomNavigationBar: SizedBox(
+        height: 60,
+        child: BottomAppBar(
+          color: Theme.of(context).colorScheme.primaryContainer,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 200,
+                height: 50,
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text(
+                    '메인으로 돌아가기',
+                    style: TextStyle(
+                      color: Colors.blueAccent,
+                      fontSize: 18,
+                    ), // 버튼 텍스트 색상
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
