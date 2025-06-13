@@ -16,7 +16,7 @@ Future<void> main() async {
   final String dbname = "market.sq3";
   final String tablename = "major_coins";
   try {
-    const windowSize = Size(840, 600);
+    const windowSize = Size(800, 900);
     await windowManager.ensureInitialized();
 
     WindowOptions windowOptions = const WindowOptions(

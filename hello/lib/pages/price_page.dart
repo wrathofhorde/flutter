@@ -110,6 +110,8 @@ class _PricePageState extends State<PricePage> {
 
   @override
   Widget build(BuildContext context) {
+    const double subtitleFontSize = 18;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(_currentDateTitle),
@@ -123,7 +125,10 @@ class _PricePageState extends State<PricePage> {
           children: [
             const Text(
               '코인 가격 정보 업데이트', // 제목을 좀 더 명확하게 변경
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: subtitleFontSize,
+                fontWeight: FontWeight.bold,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 10),
@@ -157,34 +162,37 @@ class _PricePageState extends State<PricePage> {
           ],
         ),
       ),
-      bottomNavigationBar: BottomAppBar(
-        color: Theme.of(context).colorScheme.primaryContainer, // 앱 테마에 맞는 색상
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: 200,
-              height: 50,
-              child: Tooltip(
-                // Tooltip 위젯 추가
-                message: '코인 가격 그래프, 직전 달 일년 평균 가격을 확인합니다.',
-                child: TextButton(
-                  onPressed: () {
-                    Navigator.of(
-                      context,
-                    ).push(_createSlideRoute(const GraphPage()));
-                  },
-                  child: const Text(
-                    '가격 정보 보기',
-                    style: TextStyle(
-                      color: Colors.blueAccent,
-                      fontSize: 18,
-                    ), // 버튼 텍스트 색상
+      bottomNavigationBar: SizedBox(
+        height: 60,
+        child: BottomAppBar(
+          color: Theme.of(context).colorScheme.primaryContainer, // 앱 테마에 맞는 색상
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 200,
+                height: 50,
+                child: Tooltip(
+                  // Tooltip 위젯 추가
+                  message: '코인 가격 그래프, 직전 달 일년 평균 가격을 확인합니다.',
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.of(
+                        context,
+                      ).push(_createSlideRoute(const GraphPage()));
+                    },
+                    child: const Text(
+                      '가격 정보 보기',
+                      style: TextStyle(
+                        color: Colors.blueAccent,
+                        fontSize: subtitleFontSize,
+                      ), // 버튼 텍스트 색상
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
