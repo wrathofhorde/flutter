@@ -1,12 +1,12 @@
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
 import 'package:hello/utils/duration.dart';
-import 'package:hello/model/coin_data.dart';
+import 'package:hello/pages/graph_page.dart';
+import 'package:hello/models/coin_data.dart';
 import 'package:hello/utils/closing_price.dart';
 import 'package:hello/utils/coin_price_db.dart';
-
-import 'package:provider/provider.dart';
-import 'package:hello/pages/graph_page.dart';
 
 class PricePage extends StatefulWidget {
   const PricePage({super.key});

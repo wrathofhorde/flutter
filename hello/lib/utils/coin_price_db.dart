@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:hello/model/coin_data.dart';
+import 'package:hello/models/coin_data.dart';
 import 'package:hello/utils/database_helper.dart';
 
 class CoinPriceDb {

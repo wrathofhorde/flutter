@@ -1,80 +1,145 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:hello/utils/coin_price_db.dart';
-import 'package:hello/utils/database_helper.dart';
-import 'package:hello/utils/duration.dart';
-import 'package:intl/date_symbol_data_local.dart';
-import 'package:provider/provider.dart';
-import 'package:window_manager/window_manager.dart';
-// user defined
-import 'package:hello/pages/price_page.dart';
+import 'package:intl/intl.dart';
 
-Future<void> main() async {
-  // Flutter 엔진과 위젯 바인딩이 초기화되도록 보장
-  // runApp() 이전에 비동기 작업을 수행할 때 필수
-  WidgetsFlutterBinding.ensureInitialized();
+class CoinLineChart extends StatelessWidget {
+  const CoinLineChart({
+    super.key,
+    required this.coinName,
+    required this.spots,
+    required this.lineColor,
+    required this.fullCoinData,
+  });
 
-  final String dbname = "market.sq3";
-  final String tablename = "major_coins";
-  try {
-    const windowSize = Size(800, 900);
-    await windowManager.ensureInitialized();
+  final String coinName;
+  final List<FlSpot> spots;
+  final Color lineColor;
+  final List<dynamic> fullCoinData;
 
-    WindowOptions windowOptions = const WindowOptions(
-      size: windowSize,
-      center: false, // 창을 화면 중앙에 배치
-      skipTaskbar: false, // 작업 표시줄에 앱 표시
-      titleBarStyle: TitleBarStyle.normal,
-      minimumSize: windowSize, // 창의 최소 크기를 고정 크기와 동일하게 설정
-      maximumSize: windowSize, // 창의 최대 크기를 고정 크기와 동일하게 설정
-    );
-
-    await windowManager.waitUntilReadyToShow(windowOptions, () async {
-      await windowManager.show();
-      await windowManager.focus();
-    });
-
-    await initializeDateFormatting('ko_KR', null); // 한국어 로케일 데이터 초기화
-
-    // 데이터베이스 초기화
-    await DatabaseHelper.instance.init(dbname);
-    debugPrint('DatabaseHelper initialized in main.');
-    final CoinPriceDb priceDb = CoinPriceDb(DatabaseHelper.instance, tablename);
-    await priceDb.createTableIfNotExists();
-    debugPrint('CoinPriceDb initialized in main.');
-
-    String? lastUpdateDay = await priceDb.getLastUpdatedDate();
-    debugPrint('Last update day fetched: $lastUpdateDay');
-    final Days days = Days(lastUpdateDay);
-    debugPrint(days.toString());
-
-    runApp(
-      MultiProvider(
-        providers: [
-          Provider<Days>(create: (context) => days),
-          Provider<CoinPriceDb>(create: (context) => priceDb),
-        ],
-        child: const MyApp(),
-      ),
-    );
-  } catch (e) {
-    debugPrint('Fail to init App: $e');
-  }
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color.fromARGB(255, 24, 45, 59),
+    final numberFormat = NumberFormat('#,###', 'en_US');
+
+    if (spots.isEmpty) {
+      return Container(
+        height: 200,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(8.0),
+          border: Border.all(color: Colors.grey.shade300),
         ),
+        child: Center(child: Text('$coinName 데이터 로딩 중...')),
+      );
+    }
+
+    final double currentMinY =
+        spots.map((e) => e.y).reduce((a, b) => a < b ? a : b) * 0.95;
+    final double currentMaxY =
+        spots.map((e) => e.y).reduce((a, b) => a > b ? a : b) * 1.05;
+
+    return Container(
+      height: 200,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(8.0),
+        border: Border.all(color: Colors.grey.shade300),
       ),
-      home: const PricePage(),
+      child: Column(
+        // Column 위젯 추가
+        crossAxisAlignment: CrossAxisAlignment.stretch, // 너비 전체를 차지하도록
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: Text(
+              '$coinName 가격 변화', // 그래프 타이틀
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+          Expanded(
+            // LineChart가 남은 공간을 모두 차지하도록 Expanded 추가
+            child: LineChart(
+              LineChartData(
+                gridData: const FlGridData(show: false),
+                titlesData: FlTitlesData(
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      interval: (fullCoinData.length / 5).floor().toDouble(),
+                      getTitlesWidget: (value, meta) {
+                        if (value.toInt() < 0 ||
+                            value.toInt() >= fullCoinData.length) {
+                          return const Text('');
+                        }
+                        final date = DateTime.parse(
+                          fullCoinData[value.toInt()].date,
+                        );
+                        final formatter = DateFormat('yy/MM/dd');
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            formatter.format(date),
+                            style: const TextStyle(fontSize: 10),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 70,
+                      getTitlesWidget: (value, meta) {
+                        if ((value - currentMaxY).abs() <
+                            (currentMaxY * 0.01)) {
+                          return const Text('');
+                        }
+                        return Text(
+                          numberFormat.format(value.toInt()),
+                          style: const TextStyle(fontSize: 10),
+                          textAlign: TextAlign.right,
+                        );
+                      },
+                    ),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                ),
+                borderData: FlBorderData(
+                  show: true,
+                  border: Border.all(color: const Color(0xff37434d), width: 1),
+                ),
+                minX: 0,
+                maxX: (fullCoinData.length - 1).toDouble(),
+                minY: currentMinY,
+                maxY: currentMaxY,
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: spots,
+                    isCurved: true,
+                    color: lineColor,
+                    barWidth: 2,
+                    isStrokeCapRound: true,
+                    dotData: const FlDotData(show: false),
+                    belowBarData: BarAreaData(show: false),
+                  ),
+                ],
+                lineTouchData: const LineTouchData(),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
