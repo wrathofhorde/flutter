@@ -86,6 +86,12 @@ class _GraphPageState extends State<GraphPage> {
   Future<void> _saveDailyDataAsCsv() async {
     // 1. 저장 권한 요청
     var status = await Permission.storage.request();
+
+    // 비동기 작업(await Permission.storage.request()) 후에 BuildContext를 사용하기 전에 mounted 확인
+    if (!mounted) {
+      return; // 위젯이 트리에 없으면 더 이상 진행하지 않음
+    }
+
     if (!status.isGranted) {
       ScaffoldMessenger.of(
         context,
@@ -138,6 +144,10 @@ class _GraphPageState extends State<GraphPage> {
       final path = '${targetDirectory.path}/$filename'; // 수정된 경로 사용
       final file = File(path);
       await file.writeAsString(csvString);
+
+      if (!mounted) {
+        return;
+      }
 
       ScaffoldMessenger.of(
         context,
@@ -212,7 +222,9 @@ class _GraphPageState extends State<GraphPage> {
                   ),
                   textAlign: TextAlign.center,
                 ),
+
                 const SizedBox(height: 10),
+
                 Container(
                   decoration: BoxDecoration(
                     border: Border.all(color: Colors.grey.shade400, width: 1.0),
@@ -257,6 +269,7 @@ class _GraphPageState extends State<GraphPage> {
                           ],
                         ),
                 ),
+
                 const SizedBox(height: 10),
 
                 // --- 2. 코인별 그래프 섹션 ---
@@ -268,7 +281,9 @@ class _GraphPageState extends State<GraphPage> {
                   ),
                   textAlign: TextAlign.center,
                 ),
+
                 const SizedBox(height: 10),
+
                 // BTC 그래프 - CoinLineChart 위젯 사용
                 CoinLineChart(
                   coinName: 'BTC',
@@ -276,6 +291,7 @@ class _GraphPageState extends State<GraphPage> {
                   lineColor: Colors.deepOrangeAccent,
                   fullCoinData: _dailyCoinData,
                 ),
+
                 const SizedBox(height: 10),
 
                 // ETH 그래프 - CoinLineChart 위젯 사용
@@ -285,6 +301,7 @@ class _GraphPageState extends State<GraphPage> {
                   lineColor: Colors.blueAccent, // ETH 그래프 색상 지정
                   fullCoinData: _dailyCoinData,
                 ),
+
                 const SizedBox(height: 10),
 
                 // XRP 그래프 - CoinLineChart 위젯 사용
@@ -294,6 +311,7 @@ class _GraphPageState extends State<GraphPage> {
                   lineColor: Colors.green, // XRP 그래프 색상 지정
                   fullCoinData: _dailyCoinData,
                 ),
+
                 const SizedBox(height: 10),
               ],
             ),
