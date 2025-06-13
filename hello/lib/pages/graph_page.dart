@@ -1,14 +1,16 @@
 import 'dart:io';
-
 import 'package:csv/csv.dart';
-import 'package:hello/model/coin_data.dart';
-import 'package:hello/utils/coin_price_db.dart';
-import 'package:hello/utils/duration.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:provider/provider.dart';
+// user defined
+import 'package:hello/utils/duration.dart';
+import 'package:hello/models/coin_data.dart';
+import 'package:hello/utils/coin_price_db.dart';
+import 'package:hello/widgets/coin_line_chart.dart';
 
 class GraphPage extends StatefulWidget {
   const GraphPage({super.key});
@@ -149,6 +151,33 @@ class _GraphPageState extends State<GraphPage> {
     }
   }
 
+  // BTC 그래프 데이터를 FlSpot 리스트로 변환하는 함수
+  List<FlSpot> _getBtcSpots() {
+    return _dailyCoinData.asMap().entries.map((entry) {
+      int index = entry.key;
+      CoinData data = entry.value;
+      return FlSpot(index.toDouble(), data.btc.toDouble());
+    }).toList();
+  }
+
+  // ETH 그래프 데이터를 FlSpot 리스트로 변환하는 함수
+  List<FlSpot> _getEthSpots() {
+    return _dailyCoinData.asMap().entries.map((entry) {
+      int index = entry.key;
+      CoinData data = entry.value;
+      return FlSpot(index.toDouble(), data.eth.toDouble());
+    }).toList();
+  }
+
+  // XRP 그래프 데이터를 FlSpot 리스트로 변환하는 함수
+  List<FlSpot> _getXrpSpots() {
+    return _dailyCoinData.asMap().entries.map((entry) {
+      int index = entry.key;
+      CoinData data = entry.value;
+      return FlSpot(index.toDouble(), data.xrp.toDouble());
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     const double subtitleFontSize = 18;
@@ -240,39 +269,30 @@ class _GraphPageState extends State<GraphPage> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 10),
-                // BTC 그래프 공간
-                Container(
-                  height: 200,
-                  color: Colors.grey[200],
-                  alignment: Alignment.center,
-                  child: const Text(
-                    'BTC 그래프 (여기에 Fl_chart 등 라이브러리 사용 예정)',
-                    style: TextStyle(color: Colors.black54),
-                  ),
+                // BTC 그래프 - CoinLineChart 위젯 사용
+                CoinLineChart(
+                  coinName: 'BTC',
+                  spots: _getBtcSpots(),
+                  lineColor: Colors.deepOrangeAccent,
+                  fullCoinData: _dailyCoinData,
                 ),
                 const SizedBox(height: 10),
 
-                // ETH 그래프 공간
-                Container(
-                  height: 200,
-                  color: Colors.grey[200],
-                  alignment: Alignment.center,
-                  child: const Text(
-                    'ETH 그래프 (여기에 Fl_chart 등 라이브러리 사용 예정)',
-                    style: TextStyle(color: Colors.black54),
-                  ),
+                // ETH 그래프 - CoinLineChart 위젯 사용
+                CoinLineChart(
+                  coinName: 'ETH',
+                  spots: _getEthSpots(),
+                  lineColor: Colors.blueAccent, // ETH 그래프 색상 지정
+                  fullCoinData: _dailyCoinData,
                 ),
                 const SizedBox(height: 10),
 
-                // XRP 그래프 공간
-                Container(
-                  height: 200,
-                  color: Colors.grey[200],
-                  alignment: Alignment.center,
-                  child: const Text(
-                    'XRP 그래프 (여기에 Fl_chart 등 라이브러리 사용 예정)',
-                    style: TextStyle(color: Colors.black54),
-                  ),
+                // XRP 그래프 - CoinLineChart 위젯 사용
+                CoinLineChart(
+                  coinName: 'XRP',
+                  spots: _getXrpSpots(),
+                  lineColor: Colors.green, // XRP 그래프 색상 지정
+                  fullCoinData: _dailyCoinData,
                 ),
                 const SizedBox(height: 10),
               ],
