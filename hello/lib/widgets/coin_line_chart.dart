@@ -11,16 +11,15 @@ class CoinLineChart extends StatelessWidget {
     required this.fullCoinData,
   });
 
+  final Color lineColor;
   final String coinName;
   final List<FlSpot> spots;
-  final Color lineColor;
   final List<dynamic> fullCoinData;
 
   @override
   Widget build(BuildContext context) {
     final numberFormat = NumberFormat('#,###', 'en_US');
 
-    // spots 리스트가 비어있는지 먼저 확인
     if (spots.isEmpty) {
       return Container(
         height: 200,
@@ -49,7 +48,9 @@ class CoinLineChart extends StatelessWidget {
         border: Border.all(color: Colors.grey.shade300),
       ),
       child: LineChart(
-        // spots.isEmpty 검사가 위로 올라갔으므로 여기서는 항상 데이터가 있다고 가정
+        // curve: Curves.bounceIn,
+        // duration: Duration(microseconds: 300),
+        // transformationConfig: FlTransformationConfig(),
         LineChartData(
           gridData: const FlGridData(show: false),
           titlesData: FlTitlesData(
@@ -68,7 +69,7 @@ class CoinLineChart extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 8.0),
                     child: Text(
                       formatter.format(date),
-                      style: const TextStyle(fontSize: 10),
+                      style: const TextStyle(fontSize: 11),
                     ),
                   );
                 },
@@ -86,7 +87,7 @@ class CoinLineChart extends StatelessWidget {
                   }
                   return Text(
                     numberFormat.format(value.toInt()),
-                    style: const TextStyle(fontSize: 10),
+                    style: const TextStyle(fontSize: 11),
                     textAlign: TextAlign.right,
                   );
                 },
@@ -112,13 +113,30 @@ class CoinLineChart extends StatelessWidget {
               spots: spots,
               isCurved: true,
               color: lineColor,
-              barWidth: 2,
+              barWidth: 1.2,
               isStrokeCapRound: true,
               dotData: const FlDotData(show: false),
               belowBarData: BarAreaData(show: false),
             ),
           ],
-          lineTouchData: const LineTouchData(),
+          lineTouchData: LineTouchData(
+            enabled: true,
+            touchTooltipData: LineTouchTooltipData(
+              getTooltipItems: (touchedSpot) {
+                final numberFormat = NumberFormat('#,###', 'en_US');
+                return touchedSpot
+                    .map(
+                      (spot) => LineTooltipItem(
+                        numberFormat.format(spot.y.round().toInt()),
+                        TextStyle(color: Colors.white),
+                      ),
+                    )
+                    .toList();
+              },
+              getTooltipColor: (touchedSpot) =>
+                  const Color.fromARGB(196, 158, 158, 158),
+            ),
+          ),
         ),
       ),
     );
