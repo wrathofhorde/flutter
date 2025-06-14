@@ -43,14 +43,11 @@ class CoinLineChart extends StatelessWidget {
       height: 200,
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(8.0),
-        border: Border.all(color: Colors.grey.shade300),
+        color: Colors.transparent,
+        // borderRadius: BorderRadius.circular(8.0),
+        border: Border.all(color: Colors.transparent),
       ),
       child: LineChart(
-        // curve: Curves.bounceIn,
-        // duration: Duration(microseconds: 300),
-        // transformationConfig: FlTransformationConfig(),
         LineChartData(
           gridData: const FlGridData(show: false),
           titlesData: FlTitlesData(
@@ -78,17 +75,20 @@ class CoinLineChart extends StatelessWidget {
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                reservedSize: 70,
+                reservedSize: 80,
                 getTitlesWidget: (value, meta) {
                   // Y축의 최대값과 가까운 경우 빈 텍스트를 반환하여 제거
                   if ((value - currentMaxY).abs() < (currentMaxY * 0.01)) {
                     // 오차 범위 1% 이내
                     return const Text('');
                   }
-                  return Text(
-                    numberFormat.format(value.toInt()),
-                    style: const TextStyle(fontSize: 11),
-                    textAlign: TextAlign.right,
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 7),
+                    child: Text(
+                      numberFormat.format(value.toInt()),
+                      style: const TextStyle(fontSize: 11),
+                      textAlign: TextAlign.right,
+                    ),
                   );
                 },
               ),
@@ -136,6 +136,30 @@ class CoinLineChart extends StatelessWidget {
               getTooltipColor: (touchedSpot) =>
                   const Color.fromARGB(196, 158, 158, 158),
             ),
+            getTouchedSpotIndicator:
+                (LineChartBarData barData, List<int> spotIndexes) {
+                  return spotIndexes.map((int index) {
+                    // 터치된 지점의 수직선 스타일
+                    final flLine = FlLine(
+                      color: lineColor,
+                      strokeWidth: 1.2,
+                      dashArray: [5, 5], // 점선으로 표시
+                    );
+                    // 터치된 지점의 점 스타일
+                    final dotData = FlDotData(
+                      show: true,
+                      getDotPainter: (spot, percent, barData, index) {
+                        return FlDotCirclePainter(
+                          radius: 2,
+                          color: Colors.white,
+                          strokeWidth: 2,
+                          strokeColor: lineColor,
+                        );
+                      },
+                    );
+                    return TouchedSpotIndicatorData(flLine, dotData);
+                  }).toList();
+                },
           ),
         ),
       ),
