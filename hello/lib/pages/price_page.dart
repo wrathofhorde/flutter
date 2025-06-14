@@ -23,6 +23,7 @@ class _PricePageState extends State<PricePage> {
   late final Days _days;
   late final CoinPriceDb _priceDb;
   late final ClosePrice _closePriceFetcher;
+  final String _lastInfo = "'가격 정보 보기' 페이지에서 직전달 1년 평균가를 확인할 수 있습니다.\n";
 
   @override
   void initState() {
@@ -41,8 +42,14 @@ class _PricePageState extends State<PricePage> {
       if (_days.lastUpdateDay == _days.yesterday) {
         setState(() {
           _apiDataDisplay += '최신 데이터로 업데이트 되어 있습니다.\n';
-          _apiDataDisplay += '"가격 정보 보기" 페이지에서 직전달 1년 평균가를 확인할 수 있습니다.\n';
         });
+        if (_days.today != _days.firstDateOfMonth) {
+          _fetchThisMonthPrices();
+        } else {
+          setState(() {
+            _apiDataDisplay += _lastInfo;
+          });
+        }
       } else {
         _fetchAndDisplayPrices(); // 비동기 함수 호출 시작
       }
@@ -57,6 +64,31 @@ class _PricePageState extends State<PricePage> {
     setState(() {
       _currentDateTitle = formatter.format(now);
     });
+  }
+
+  Future<void> _fetchThisMonthPrices() async {
+    setState(() {
+      _apiDataDisplay += "저장된 데이터를 가져오는 중...\n";
+    });
+    try {
+      final dailyPirces = await _priceDb.getCoinDataByDateRange(
+        startDate: _days.firstDateOfMonth,
+        endDate: _days.lastUpdateDay,
+      );
+      for (CoinData price in dailyPirces) {
+        setState(() {
+          _apiDataDisplay += '$price\n';
+        });
+      }
+      setState(() {
+        _apiDataDisplay += _lastInfo;
+      });
+    } catch (e) {
+      debugPrint('데이터 불러오기 중 오류 발생: $e');
+      setState(() {
+        _apiDataDisplay = '데이터 불러오기 중 오류 발생했습니다.';
+      });
+    }
   }
 
   Future<void> _fetchAndDisplayPrices() async {
@@ -93,7 +125,6 @@ class _PricePageState extends State<PricePage> {
       setState(() {
         _apiDataDisplay += "주요 코인 가격 정보 저장 중...\n";
       });
-
       _priceDb.bulkInsertMajorCoinPrices(params: coinPirces);
       setState(() {
         _apiDataDisplay += '주요 코인 가격 정보 저장이 완료되었습니다.\n';
@@ -119,7 +150,7 @@ class _PricePageState extends State<PricePage> {
         centerTitle: true,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0), // 전체적인 여백
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 32),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch, // 자식 위젯을 가로로 최대한 늘림
           children: [
@@ -134,7 +165,7 @@ class _PricePageState extends State<PricePage> {
             const SizedBox(height: 10),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 40),
+                padding: const EdgeInsets.all(0),
                 // 남은 모든 공간을 SingleChildScrollView가 차지하도록 함
                 child: Container(
                   padding: const EdgeInsets.all(12.0), // 텍스트와 테두리 사이 여백

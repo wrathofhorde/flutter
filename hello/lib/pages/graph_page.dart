@@ -11,8 +11,7 @@ import 'package:hello/utils/duration.dart';
 import 'package:hello/models/coin_data.dart';
 import 'package:hello/utils/coin_price_db.dart';
 import 'package:hello/widgets/coin_line_chart.dart';
-// 새로 추가된 임포트
-import 'package:hello/widgets/coin_price_table.dart'; // <--- 이 부분을 추가합니다.
+import 'package:hello/widgets/coin_price_table.dart';
 
 class GraphPage extends StatefulWidget {
   const GraphPage({super.key});
@@ -79,7 +78,7 @@ class _GraphPageState extends State<GraphPage> {
       setState(() {
         _dailyCoinData = [];
         _yearAggregatedData = null;
-        _currentDateTitle = '데이터 로드 오류';
+        _currentDateTitle = '데이터 불러오기 중 오류 발생했습니다.';
       });
     }
   }
@@ -199,7 +198,7 @@ class _GraphPageState extends State<GraphPage> {
       body: SelectionArea(
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 32),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[

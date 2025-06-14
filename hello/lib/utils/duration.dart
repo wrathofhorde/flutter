@@ -1,4 +1,4 @@
-import 'dart:developer'; // log 함수를 위해 추가
+import 'dart:developer';
 import 'package:intl/intl.dart';
 
 class Days {
@@ -46,6 +46,7 @@ class Days {
   String get startDay => dateFormatter.format(_firstDayOfLastYear);
   String get endDay => dateFormatter.format(_lastDayOfPreviousMonth);
   String get lastUpdateDay => dateFormatter.format(_lastUpdateDay);
+  String get firstDateOfMonth => dateFormatter.format(_firstDayOfMonth);
 
   DateTime get updateStartDay => _lastUpdateDay.add(const Duration(days: 1));
   DateTime get updateEndDay => _yesterday;
