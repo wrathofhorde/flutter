@@ -26,9 +26,8 @@ class CoinPriceDb {
             $_columnXrp INTEGER
           );
         ''';
-
+    debugPrint(sql);
     await _dbHelper.execute(sql);
-    debugPrint('Repository: Create table');
   }
 
   Future<void> insertMajorCoinPrices({
@@ -43,8 +42,8 @@ class CoinPriceDb {
           ($_columnDate, $_columnBtc, $_columnEth, $_columnXrp) 
           VALUES (?, ?, ?, ?);
         ''';
+    debugPrint(sql);
     await _dbHelper.execute(sql, [date, btc, eth, xrp]);
-    debugPrint('Repository: Inserted coin data for $date');
   }
 
   Future<void> bulkInsertMajorCoinPrices({
@@ -56,9 +55,9 @@ class CoinPriceDb {
       ($_columnDate, $_columnBtc, $_columnEth, $_columnXrp)
       VALUES (?, ?, ?, ?);
       ''';
-
+    debugPrint(sql);
     await _dbHelper.executeMany(sql, params);
-    debugPrint('Repository: Bulk inserted ${params.length} coin data entries.');
+    // debugPrint('Repository: Bulk inserted ${params.length} coin data entries.');
   }
 
   Future<List<CoinData>> getAllCoinData() async {
@@ -68,11 +67,12 @@ class CoinPriceDb {
           FROM $_tableName 
           ORDER BY date DESC;
         ''';
+    debugPrint(sql);
     final result = await _dbHelper.fetchAll(sql);
     final List<CoinData> coinDataList = result
         .map((map) => CoinData.fromMap(map))
         .toList();
-    debugPrint('Repository: Fetched all coin data: $coinDataList');
+    // debugPrint('Repository: Fetched all coin data: $coinDataList');
     return coinDataList;
   }
 
@@ -87,13 +87,14 @@ class CoinPriceDb {
           WHERE $_columnDate BETWEEN ? AND ? 
           ORDER BY $_columnDate ASC;
         ''';
+    debugPrint(sql);
     final result = await _dbHelper.fetchAll(sql, [startDate, endDate]);
     final List<CoinData> coinDataList = result
         .map((map) => CoinData.fromMap(map))
         .toList();
-    debugPrint(
-      'Repository: Fetched coin data from $startDate to $endDate: $coinDataList',
-    );
+    // debugPrint(
+    //   'Repository: Fetched coin data from $startDate to $endDate: $coinDataList',
+    // );
     return coinDataList;
   }
 
@@ -104,13 +105,14 @@ class CoinPriceDb {
           FROM $_tableName
           WHERE $_columnDate = ?;
         ''';
+    debugPrint(sql);
     final result = await _dbHelper.fetchOne(sql, [date]);
     if (result != null) {
       final CoinData coinData = CoinData.fromMap(result);
-      debugPrint('Repository: Fetched coin data for $date: $coinData');
+      // debugPrint('Repository: Fetched coin data for $date: $coinData');
       return coinData;
     }
-    debugPrint('Repository: No coin data found for $date');
+    // debugPrint('Repository: No coin data found for $date');
     return null;
   }
 
@@ -120,9 +122,10 @@ class CoinPriceDb {
           SELECT MAX($_columnDate) AS last_date 
           FROM $_tableName;
         ''';
+    debugPrint(sql);
     final result = await _dbHelper.fetchOne(sql);
     final String? lastDate = result?['last_date'] as String?;
-    debugPrint('Repository: Last updated date: $lastDate');
+    // debugPrint('Repository: Last updated date: $lastDate');
     return lastDate;
   }
 
@@ -139,9 +142,8 @@ class CoinPriceDb {
         FROM $_tableName
         WHERE $_columnDate BETWEEN ? AND ?;
         '''; // ORDER BY는 단일 결과에는 필요 없음
-
+    debugPrint(sql);
     final result = await _dbHelper.fetchOne(sql, [startDate, endDate]);
-
     if (result != null) {
       return {
         'btc': {
