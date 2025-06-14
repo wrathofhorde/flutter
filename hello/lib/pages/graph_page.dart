@@ -11,6 +11,8 @@ import 'package:hello/utils/duration.dart';
 import 'package:hello/models/coin_data.dart';
 import 'package:hello/utils/coin_price_db.dart';
 import 'package:hello/widgets/coin_line_chart.dart';
+// 새로 추가된 임포트
+import 'package:hello/widgets/coin_price_table.dart'; // <--- 이 부분을 추가합니다.
 
 class GraphPage extends StatefulWidget {
   const GraphPage({super.key});
@@ -86,69 +88,57 @@ class _GraphPageState extends State<GraphPage> {
   Future<void> _saveDailyDataAsCsv() async {
     // 1. 저장 권한 요청
     var status = await Permission.storage.request();
-
     // 비동기 작업(await Permission.storage.request()) 후에 BuildContext를 사용하기 전에 mounted 확인
     if (!mounted) {
       return; // 위젯이 트리에 없으면 더 이상 진행하지 않음
     }
-
     if (!status.isGranted) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('파일 저장을 위한 저장소 권한이 필요합니다.')));
       return;
     }
-
     if (_dailyCoinData.isEmpty) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('저장할 일별 코인 데이터가 없습니다.')));
       return;
     }
-
     // 2. CSV 데이터 준비
     List<List<dynamic>> csvData = [];
-
     // 헤더 추가
     csvData.add(['Date', 'BTC', 'ETH', 'XRP']);
-
     // 평균가 추가
     final avgBtc = _yearAggregatedData?['btc']['avg'];
     final avgEth = _yearAggregatedData?['eth']['avg'];
     final avgXrp = _yearAggregatedData?['xrp']['avg'];
     csvData.add(["Average", avgBtc, avgEth, avgXrp]);
-
     // 데이터 추가
     for (var data in _dailyCoinData) {
       csvData.add(data.toList());
     }
-
     // 3. CSV 문자열로 변환
     // 3. CSV 문자열로 변환 (구분자 탭으로 변경)
     String csvString = const ListToCsvConverter().convert(csvData);
-
     // 4. 파일 경로 설정 및 저장
     try {
       final directory = await getApplicationDocumentsDirectory();
       final subDirectory = 'coin prices';
-
       // 서브 디렉터리 경로 생성
       final targetDirectory = Directory('${directory.path}/$subDirectory');
-
       // 서브 디렉터리가 없으면 생성 (recursive: true로 중간 경로도 함께 생성)
       if (!await targetDirectory.exists()) {
         await targetDirectory.create(recursive: true);
       }
-
       final filename = '${_days.startDay}-${_days.endDay}.csv';
       final path = '${targetDirectory.path}/$filename'; // 수정된 경로 사용
       final file = File(path);
+
       await file.writeAsString(csvString);
 
       if (!mounted) {
         return;
       }
-
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('CSV 파일이 $path 에 저장되었습니다.')));
@@ -209,69 +199,17 @@ class _GraphPageState extends State<GraphPage> {
       body: SelectionArea(
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
                 // --- 1. 집계 가격 정보 테이블 ---
-                Text(
-                  '${_days.startDay} ~ ${_days.endDay} 평균가, 최고가, 최저가',
-                  style: const TextStyle(
-                    fontSize: subtitleFontSize,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
+                CoinPriceTable(
+                  startDate: _days.startDay,
+                  endDate: _days.endDay,
+                  yearAggregatedData: _yearAggregatedData,
                 ),
-
                 const SizedBox(height: 10),
-
-                Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade400, width: 1.0),
-                    borderRadius: BorderRadius.circular(8.0),
-                  ),
-                  child: _yearAggregatedData == null
-                      ? const Padding(
-                          padding: EdgeInsets.all(20.0),
-                          child: Center(
-                            child: CircularProgressIndicator(),
-                          ), // 데이터 로딩 중 표시
-                        )
-                      : Table(
-                          // DataTable 대신 Table 위젯 사용
-                          border: TableBorder.all(
-                            color: Colors.grey.shade400,
-                          ), // 보더 추가
-                          defaultColumnWidth: const FlexColumnWidth(
-                            1.0,
-                          ), // 모든 컬럼을 동일한 비율로 나눔
-                          children: [
-                            TableRow(
-                              children: [
-                                _buildTableHeaderCell('코인'),
-                                _buildTableHeaderCell('평균가 (원)'),
-                                _buildTableHeaderCell('최고가 (원)'),
-                                _buildTableHeaderCell('최저가 (원)'),
-                              ],
-                            ),
-                            _buildTableDataRow(
-                              'BTC',
-                              _yearAggregatedData!['btc'],
-                            ),
-                            _buildTableDataRow(
-                              'ETH',
-                              _yearAggregatedData!['eth'],
-                            ),
-                            _buildTableDataRow(
-                              'XRP',
-                              _yearAggregatedData!['xrp'],
-                            ),
-                          ],
-                        ),
-                ),
-
-                const SizedBox(height: 10),
-
                 // --- 2. 코인별 그래프 섹션 ---
                 const Text(
                   '코인별 1년 종가 변화',
@@ -281,9 +219,7 @@ class _GraphPageState extends State<GraphPage> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-
-                const SizedBox(height: 10),
-
+                const SizedBox(height: 5),
                 // BTC 그래프 - CoinLineChart 위젯 사용
                 CoinLineChart(
                   coinName: 'BTC',
@@ -291,9 +227,7 @@ class _GraphPageState extends State<GraphPage> {
                   lineColor: Colors.deepOrangeAccent,
                   fullCoinData: _dailyCoinData,
                 ),
-
-                const SizedBox(height: 10),
-
+                const SizedBox(height: 5),
                 // ETH 그래프 - CoinLineChart 위젯 사용
                 CoinLineChart(
                   coinName: 'ETH',
@@ -301,9 +235,7 @@ class _GraphPageState extends State<GraphPage> {
                   lineColor: Colors.blueAccent, // ETH 그래프 색상 지정
                   fullCoinData: _dailyCoinData,
                 ),
-
-                const SizedBox(height: 10),
-
+                const SizedBox(height: 5),
                 // XRP 그래프 - CoinLineChart 위젯 사용
                 CoinLineChart(
                   coinName: 'XRP',
@@ -311,7 +243,6 @@ class _GraphPageState extends State<GraphPage> {
                   lineColor: Colors.green, // XRP 그래프 색상 지정
                   fullCoinData: _dailyCoinData,
                 ),
-
                 const SizedBox(height: 10),
               ],
             ),
@@ -349,52 +280,8 @@ class _GraphPageState extends State<GraphPage> {
     );
   }
 
-  TableRow _buildTableDataRow(String coinName, Map<String, dynamic> data) {
-    final avg = data['avg'] as int;
-    final max = data['max'] as int;
-    final min = data['min'] as int;
-
-    final numberFormat = NumberFormat('#,###', 'en_US');
-
-    return TableRow(
-      children: [
-        _buildTableCell(coinName, textAlign: TextAlign.center),
-        _buildTableCell(numberFormat.format(avg)),
-        _buildTableCell(numberFormat.format(max)),
-        _buildTableCell(numberFormat.format(min)),
-      ],
-    );
-  }
-
-  Widget _buildTableCell(
-    String text, {
-    TextAlign textAlign = TextAlign.right,
-    FontWeight fontWeight = FontWeight.normal,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-      child: Text(
-        text,
-        textAlign: textAlign,
-        style: TextStyle(
-          fontFamily: 'Cascadia Code', // 폰트 패밀리 적용
-          fontWeight: fontWeight,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTableHeaderCell(String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
-      child: Text(
-        text,
-        textAlign: TextAlign.center, // 헤더는 가운데 정렬
-        style: const TextStyle(
-          fontFamily: 'Cascadia Code', // 폰트 패밀리 적용
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
+  // 이 함수들은 이제 CoinPriceTable 위젯 내부로 이동했습니다.
+  // TableRow _buildTableDataRow(String coinName, Map<String, dynamic> data) { ... }
+  // Widget _buildTableCell(String text, { ... }) { ... }
+  // Widget _buildTableHeaderCell(String text) { ... }
 }
