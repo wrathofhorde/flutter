@@ -237,7 +237,7 @@ class _PricePageState extends State<PricePage> {
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
         const begin = Offset(1.0, 0.0); // 오른쪽에서 시작 (다음 페이지가 들어올 때)
         const end = Offset.zero; // 원래 위치로 이동
-        const curve = Curves.ease; // 부드러운 애니메이션 곡선
+        const curve = Curves.easeInOutQuad;
 
         var tween = Tween(
           begin: begin,
