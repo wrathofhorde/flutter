@@ -141,7 +141,7 @@ class _PricePageState extends State<PricePage> {
                   decoration: BoxDecoration(
                     border: Border.all(color: Colors.grey, width: 1.0), // 테두리
                     borderRadius: BorderRadius.circular(8.0), // 모서리 둥글게
-                    color: Colors.grey[50], // 배경색 (선택 사항)
+                    color: Colors.transparent, // 배경색 (선택 사항)
                   ),
                   child: SingleChildScrollView(
                     // 내용이 길어지면 스크롤 가능하게
