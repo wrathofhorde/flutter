@@ -45,6 +45,8 @@ dependencies:
   permission_handler: ^11.3.1 # 권한 요청을 위해 필요
   csv: ^5.1.1
   fl_chart: ^1.0.0
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: "^0.13.1"
 
 dev_dependencies:
   flutter_test:
@@ -55,7 +57,6 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^5.0.0
   mockito: ^5.4.4 # 최신 버전 확인 후 사용
   integration_test:
     sdk: flutter
@@ -105,5 +106,23 @@ flutter:
   fonts:
     - family: Cascadia Code
       fonts:
-        - asset: fonts/CascadiaCode-Regular.ttf # 실제 파일 경로에 맞게 수정
-        - asset: fonts/CascadiaCode-SemiBold.ttf # 여러 굵기를 사용하려면 추가
+        - asset: assets/fonts/CascadiaCode-Regular.ttf # 실제 파일 경로에 맞게 수정
+        - asset: assets/fonts/CascadiaCode-SemiBold.ttf # 여러 굵기를 사용하려면 추가
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon/app_icon.png" # 준비한 아이콘 이미지 경로
+  min_sdk_android: 21
+  # web:
+  #   generate: true
+  #   image_path: "assets/icon/app_icon.png"
+  #   background_color: "#hexcode"
+  #   theme_color: "#hexcode"
+  windows:
+    generate: true
+    image_path: "assets/icon/app_icon.png"
+    icon_size: 48
+  macos: # macOS 아이콘 설정 추가
+    generate: true
+    image_path: "assets/icon/app_icon.png"
