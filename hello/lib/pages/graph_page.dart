@@ -60,6 +60,9 @@ class _GraphPageState extends State<GraphPage> {
     final endDate = _days.endDay;
 
     try {
+      setState(() {
+        _currentDateTitle = '${_days.startDay} ~ ${_days.endDay}';
+      });
       final dailyData = await _priceDb.getCoinDataByDateRange(
         startDate: startDate,
         endDate: endDate,
@@ -204,8 +207,8 @@ class _GraphPageState extends State<GraphPage> {
               children: <Widget>[
                 // --- 1. 집계 가격 정보 테이블 ---
                 CoinPriceTable(
-                  startDate: _days.startDay,
-                  endDate: _days.endDay,
+                  // startDate: _days.startDay,
+                  // endDate: _days.endDay,
                   yearAggregatedData: _yearAggregatedData,
                 ),
                 const SizedBox(height: 10),
