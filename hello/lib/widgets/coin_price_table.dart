@@ -4,13 +4,13 @@ import 'package:flutter/material.dart';
 class CoinPriceTable extends StatelessWidget {
   const CoinPriceTable({
     super.key,
-    required this.startDate,
-    required this.endDate,
+    // required this.startDate,
+    // required this.endDate,
     required this.yearAggregatedData,
   });
 
-  final String startDate;
-  final String endDate;
+  // final String startDate;
+  // final String endDate;
   final Map<String, dynamic>? yearAggregatedData;
 
   @override
@@ -21,7 +21,8 @@ class CoinPriceTable extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          '$startDate ~ $endDate',
+          // '$startDate ~ $endDate',
+          '코인별 가격 정보',
           style: const TextStyle(
             fontSize: subtitleFontSize,
             fontWeight: FontWeight.bold,
@@ -48,9 +49,9 @@ class CoinPriceTable extends StatelessWidget {
                     TableRow(
                       children: [
                         _buildTableHeaderCell('코인'),
-                        _buildTableHeaderCell('평균가'),
-                        _buildTableHeaderCell('최고가'),
-                        _buildTableHeaderCell('최저가'),
+                        _buildTableHeaderCell('평균가(원)'),
+                        _buildTableHeaderCell('최고가(원)'),
+                        _buildTableHeaderCell('최저가(원)'),
                       ],
                     ),
                     _buildTableDataRow('BTC', yearAggregatedData!['btc']),
@@ -74,9 +75,9 @@ class CoinPriceTable extends StatelessWidget {
     return TableRow(
       children: [
         _buildTableCell(coinName, textAlign: TextAlign.center),
-        _buildTableCell("${numberFormat.format(avg)}원"),
-        _buildTableCell("${numberFormat.format(max)}원"),
-        _buildTableCell("${numberFormat.format(min)}원"),
+        _buildTableCell(numberFormat.format(avg)),
+        _buildTableCell(numberFormat.format(max)),
+        _buildTableCell(numberFormat.format(min)),
       ],
     );
   }
