@@ -1,30 +1,41 @@
 // lib/main.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:responsive_framework/responsive_framework.dart';
+
 import 'package:assets_snapshot/database/database_helper.dart';
 import 'package:assets_snapshot/screens/account_list_screen.dart';
-import 'package:flutter/foundation.dart';
-import 'package:provider/provider.dart';
-import 'package:assets_snapshot/providers/theme_provider.dart';
-import 'package:responsive_framework/responsive_framework.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:window_manager/window_manager.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // 데스크톱 환경에서 sqflite_common_ffi 초기화 로직은 유지
   if (defaultTargetPlatform == TargetPlatform.windows ||
       defaultTargetPlatform == TargetPlatform.linux ||
       defaultTargetPlatform == TargetPlatform.macOS) {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
+
+    // WindowManager 초기화 및 창 제목 설정
+    await windowManager.ensureInitialized(); // <-- windowManager 초기화
+
+    WindowOptions windowOptions = const WindowOptions(
+      size: Size(800, 600), // 초기 창 크기 설정 (선택 사항)
+      center: true, // 창을 화면 중앙에 위치 (선택 사항)
+      // skipTaskbar: false, // 작업 표시줄에 표시 (기본값)
+      titleBarStyle: TitleBarStyle.normal, // 타이틀 바 스타일
+    );
+    await windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      await windowManager.focus();
+      await windowManager.setTitle('자산 관리'); // <-- 여기에 원하는 한글 제목 설정
+    });
   }
 
-  runApp(
-    ChangeNotifierProvider(
-      create: (context) => ThemeProvider(),
-      child: const MyApp(),
-    ),
-  );
+  runApp(const MyApp());
 }
 
 class MyApp extends StatefulWidget {
@@ -53,13 +64,12 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-
     return MaterialApp(
-      title: 'Asset Snapshot',
-      themeMode: themeProvider.themeMode,
-      theme: ThemeData.light().copyWith(
+      // title: '자산 관리',
+      debugShowCheckedModeBanner: false, // 디버그 배너 제거 (선택 사항)
+      theme: ThemeData.light(useMaterial3: true).copyWith(
         primaryColor: Colors.blue,
+        scaffoldBackgroundColor: Colors.grey.shade50,
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.blue,
           elevation: 0,
@@ -68,43 +78,40 @@ class _MyAppState extends State<MyApp> {
             fontSize: 20.0,
             fontWeight: FontWeight.bold,
           ),
-          iconTheme: IconThemeData(color: Colors.white),
+          iconTheme: IconThemeData(color: Colors.white), // 앱바 아이콘 색상
         ),
+
         cardTheme: CardThemeData(
-          color: Colors.white,
+          color: Colors.white, // 카드 배경색을 흰색으로 고정
           margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
           elevation: 2.0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8.0),
           ),
         ),
+
         listTileTheme: const ListTileThemeData(
-          textColor: Colors.black87,
-          iconColor: Colors.black54,
+          textColor: Colors.black87, // ListTile 텍스트 색상
+          iconColor: Colors.black54, // ListTile 아이콘 색상
         ),
+
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blue,
-            foregroundColor: Colors.white,
+            backgroundColor: Colors.blue, // 버튼 배경색을 라이트 모드 기본색으로
+            foregroundColor: Colors.white, // 버튼 텍스트 색상
           ),
         ),
+
         textTheme: const TextTheme(
-          bodyMedium: TextStyle(color: Colors.black87),
+          bodyMedium: TextStyle(color: Colors.black87), // 기본 본문 텍스트 색상
         ),
-        // === 수정된 부분: 라이트 모드 InputDecorationTheme 설정 ===
+
         inputDecorationTheme: InputDecorationTheme(
-          // 입력된 텍스트의 기본 색상
-          // 이 부분이 TextField에 입력되는 글자의 색상을 직접 제어합니다.
-          // TextField/TextFormField의 style 속성이 우선하지만, 테마 기본값으로 좋습니다.
-          // 여기서 입력 텍스트의 기본 색상을 검정색으로 설정합니다.
-          // TextField 위젯 자체의 style 속성을 명시적으로 'style: TextStyle(color: Colors.black)'으로 설정하는 것도 좋습니다.
           labelStyle: TextStyle(color: Colors.grey[700]), // 라벨 텍스트 색상
           hintStyle: TextStyle(color: Colors.grey[400]), // 힌트 텍스트 색상
-          // 필드의 배경색을 아주 미묘하게 다르게 설정하여 구분감을 줍니다.
-          // 너무 흰색이면 배경과 구분이 안 되므로, 살짝 회색을 줍니다.
-          filled: true, // 배경색 채움 활성화
-          fillColor: Colors.white, // 변경: 아주 연한 회색으로 배경색 설정 (Colors.white 대신)
-
+          filled: true,
+          fillColor:
+              Colors.grey.shade100, // 입력 필드 배경색을 아주 연한 회색으로 (기존 white에서 변경)
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8.0),
             borderSide: BorderSide(color: Colors.grey[300]!, width: 1.0),
@@ -115,10 +122,7 @@ class _MyAppState extends State<MyApp> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8.0),
-            borderSide: BorderSide(
-              color: Colors.blue,
-              width: 2.0,
-            ), // 포커스 시 파란색 강조
+            borderSide: BorderSide(color: Colors.blue, width: 2.0),
           ),
           errorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8.0),
@@ -129,67 +133,6 @@ class _MyAppState extends State<MyApp> {
             borderSide: BorderSide(color: Colors.red, width: 2.0),
           ),
         ),
-        // ========================================================
-      ),
-      darkTheme: ThemeData.dark().copyWith(
-        primaryColor: Colors.black,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.black12,
-          elevation: 0,
-          titleTextStyle: TextStyle(
-            color: Colors.white,
-            fontSize: 20.0,
-            fontWeight: FontWeight.bold,
-          ),
-          iconTheme: IconThemeData(color: Colors.white),
-        ),
-        cardTheme: CardThemeData(
-          color: Colors.grey.shade900,
-          margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          elevation: 2.0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8.0),
-          ),
-        ),
-        listTileTheme: const ListTileThemeData(
-          textColor: Colors.white,
-          iconColor: Colors.white70,
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blueGrey.shade800,
-            foregroundColor: Colors.white,
-          ),
-        ),
-        textTheme: const TextTheme(bodyMedium: TextStyle(color: Colors.white)),
-        // === 다크 모드 InputDecorationTheme도 필요하다면 여기에 설정 가능 ===
-        inputDecorationTheme: InputDecorationTheme(
-          labelStyle: TextStyle(color: Colors.white70),
-          hintStyle: TextStyle(color: Colors.grey),
-          filled: true,
-          fillColor: Colors.grey.shade800, // 다크 모드 필드 배경색
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8.0),
-            borderSide: BorderSide(color: Colors.grey.shade700, width: 1.0),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8.0),
-            borderSide: BorderSide(color: Colors.grey.shade700, width: 1.0),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8.0),
-            borderSide: BorderSide(color: Colors.blueAccent, width: 2.0),
-          ),
-          errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8.0),
-            borderSide: BorderSide(color: Colors.redAccent, width: 1.0),
-          ),
-          focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8.0),
-            borderSide: BorderSide(color: Colors.redAccent, width: 2.0),
-          ),
-        ),
-        // =============================================================
       ),
       builder: (context, child) => ResponsiveBreakpoints.builder(
         child: child!,

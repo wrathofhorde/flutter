@@ -130,6 +130,7 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
+                          tooltip: '수정',
                           icon: const Icon(Icons.edit),
                           onPressed: () async {
                             final result = await Navigator.push(
@@ -147,6 +148,7 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
                           },
                         ),
                         IconButton(
+                          tooltip: '삭제',
                           icon: const Icon(Icons.delete),
                           onPressed: () {
                             showDialog(
