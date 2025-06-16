@@ -13,11 +13,11 @@ class AddAccountScreen extends StatefulWidget {
 }
 
 class _AddAccountScreenState extends State<AddAccountScreen> {
-  final _formKey = GlobalKey<FormState>(); // 폼의 상태를 관리하기 위한 키
+  final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
 
-  final DatabaseHelper _dbHelper = DatabaseHelper(); // DatabaseHelper 인스턴스
+  final DatabaseHelper _dbHelper = DatabaseHelper();
 
   @override
   void dispose() {
@@ -26,10 +26,8 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
     super.dispose();
   }
 
-  // 계좌 추가 로직
   Future<void> _addAccount() async {
     if (_formKey.currentState!.validate()) {
-      // 폼 유효성 검사
       final String now = DateFormat(
         'yyyy-MM-dd HH:mm:ss',
       ).format(DateTime.now());
@@ -38,7 +36,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
         name: _nameController.text,
         description: _descriptionController.text.isNotEmpty
             ? _descriptionController.text
-            : null, // 설명이 비어있으면 null로 저장
+            : null,
         createdAt: now,
         updatedAt: now,
       );
@@ -48,7 +46,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('계좌가 성공적으로 추가되었습니다!')));
-        Navigator.pop(context, true); // 계좌 목록 화면으로 돌아가기 (true 반환하여 갱신 알림)
+        Navigator.pop(context, true);
       } catch (e) {
         String errorMessage = '계좌 추가 실패: $e';
         if (e.toString().contains('UNIQUE constraint failed: Accounts.name')) {
@@ -74,10 +72,15 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
             children: [
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(
+                // === 수정 시작 ===
+                decoration: InputDecoration(
+                  // const 키워드 제거
                   labelText: '계좌명 (필수)',
-                  border: OutlineInputBorder(),
+                  border: OutlineInputBorder(), // 테마에서 제공하는 기본 테두리 스타일 적용
+                  filled: true, // 이 부분을 true로 설정해야 테마의 fillColor가 적용됩니다.
                 ),
+                style: TextStyle(color: Colors.black), // 입력되는 글씨 색상을 검정색으로 명시
+                // === 수정 끝 ===
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return '계좌명을 입력해주세요.';
@@ -88,10 +91,15 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
               const SizedBox(height: 16.0),
               TextFormField(
                 controller: _descriptionController,
-                decoration: const InputDecoration(
+                // === 수정 시작 ===
+                decoration: InputDecoration(
+                  // const 키워드 제거
                   labelText: '설명 (선택 사항)',
                   border: OutlineInputBorder(),
+                  filled: true, // 이 부분을 true로 설정해야 테마의 fillColor가 적용됩니다.
                 ),
+                style: TextStyle(color: Colors.black), // 입력되는 글씨 색상을 검정색으로 명시
+                // === 수정 끝 ===
                 maxLines: 3,
               ),
               const SizedBox(height: 24.0),
