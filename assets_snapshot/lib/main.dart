@@ -64,6 +64,10 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    return _materialTheme;
+  }
+
+  MaterialApp get _materialTheme {
     return MaterialApp(
       // title: '자산 관리',
       debugShowCheckedModeBanner: false, // 디버그 배너 제거 (선택 사항)
