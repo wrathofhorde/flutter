@@ -43,6 +43,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
 
       try {
         await _dbHelper.insertAccount(newAccount);
+        if (!mounted) return;
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('계좌가 성공적으로 추가되었습니다!')));

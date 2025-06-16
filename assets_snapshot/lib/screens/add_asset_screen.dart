@@ -65,16 +65,22 @@ class _AddAssetScreenState extends State<AddAssetScreen> {
         if (_isEditing) {
           // 수정 모드: 업데이트
           await _dbHelper.updateAsset(assetToSave);
+          // 비동기 작업 후 BuildContext를 사용하기 전에 위젯이 마운트된 상태인지 확인
+          if (!mounted) return;
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(const SnackBar(content: Text('종목이 성공적으로 수정되었습니다!')));
         } else {
           // 추가 모드: 삽입
           await _dbHelper.insertAsset(assetToSave);
+          // 비동기 작업 후 BuildContext를 사용하기 전에 위젯이 마운트된 상태인지 확인
+          if (!mounted) return;
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(const SnackBar(content: Text('종목이 성공적으로 추가되었습니다!')));
         }
+        // Navigator.pop 전에 한 번 더 mounted 체크 (선택 사항이지만 안전성 증대)
+        if (!mounted) return;
         Navigator.pop(context, true); // 성공 시 true 반환하여 이전 화면 갱신
       } catch (e) {
         String action = _isEditing ? '수정' : '추가';
@@ -82,6 +88,8 @@ class _AddAssetScreenState extends State<AddAssetScreen> {
         if (e.toString().contains('UNIQUE constraint failed')) {
           errorMessage = '이미 해당 계좌에 같은 이름의 종목이 존재합니다.';
         }
+        // 오류 스낵바 표시 전에도 mounted 체크
+        if (!mounted) return;
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(errorMessage)));
@@ -139,7 +147,6 @@ class _AddAssetScreenState extends State<AddAssetScreen> {
                     displayText =
                         type.name[0].toUpperCase() + type.name.substring(1);
                   }
-
                   return DropdownMenuItem(
                     value: type,
                     child: Text(
