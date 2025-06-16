@@ -1,14 +1,11 @@
-// lib/screens/account_list_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:assets_snapshot/database/database_helper.dart';
 import 'package:assets_snapshot/models/account.dart';
 import 'package:assets_snapshot/screens/add_account_screen.dart';
-import 'package:provider/provider.dart'; // Provider 패키지 임포트
-import 'package:assets_snapshot/providers/theme_provider.dart'; // ThemeProvider 임포트
-import 'package:intl/intl.dart'; // DateFormat 사용을 위해 추가
+// import 'package:provider/provider.dart'; // Provider 패키지 임포트 제거
+// import 'package:assets_snapshot/providers/theme_provider.dart'; // ThemeProvider 임포트 제거
+import 'package:intl/intl.dart';
 
-// 새로 추가될 계좌 상세 화면 임포트
 import 'package:assets_snapshot/screens/account_detail_screen.dart';
 
 class AccountListScreen extends StatefulWidget {
@@ -35,14 +32,10 @@ class _AccountListScreenState extends State<AccountListScreen> {
   }
 
   void _deleteAccount(int id) async {
-    // 계좌 삭제 시 해당 계좌에 속한 모든 종목도 함께 삭제
-    // ON DELETE CASCADE 제약 조건 때문에 DB에서 자동으로 삭제되지만,
-    // 명시적으로 호출하여 디버그 로그를 남기거나 추가 작업이 필요할 때 사용 가능
-    await _dbHelper.deleteAllAssetsByAccountId(id); // 해당 계좌의 모든 종목 삭제
-    await _dbHelper.deleteAccount(id); // 계좌 삭제
+    await _dbHelper.deleteAllAssetsByAccountId(id);
+    await _dbHelper.deleteAccount(id);
 
-    // 비동기 작업 후 BuildContext를 사용하기 전에 위젯이 마운트된 상태인지 확인
-    if (!mounted) return;
+    if (!mounted) return; // BuildContext 경고 방지
 
     ScaffoldMessenger.of(
       context,
@@ -52,34 +45,12 @@ class _AccountListScreenState extends State<AccountListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // ThemeProvider 인스턴스에 접근
-    final themeProvider = Provider.of<ThemeProvider>(context);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('나의 계좌 목록'),
         actions: [
-          // 테마 토글 스위치 추가
-          Switch(
-            value: themeProvider.themeMode == ThemeMode.dark, // 현재 다크 모드인지 여부
-            onChanged: (isDark) {
-              themeProvider.setThemeMode(
-                isDark ? ThemeMode.dark : ThemeMode.light,
-              );
-            },
-            thumbIcon: WidgetStateProperty.resolveWith<Icon?>((
-              Set<WidgetState> states,
-            ) {
-              if (states.contains(WidgetState.selected)) {
-                return const Icon(Icons.nightlight_round); // 다크 모드 아이콘
-              }
-              return const Icon(Icons.wb_sunny_rounded); // 라이트 모드 아이콘
-            }),
-            activeColor: Colors.blueGrey, // 스위치 활성화 시 색상
-            inactiveThumbColor: Colors.yellow, // 비활성화 시 엄지 색상
-            inactiveTrackColor: Colors.yellow.shade200, // 비활성화 시 트랙 색상
-          ),
           IconButton(
+            tooltip: "계좌 추가",
             icon: const Icon(Icons.add),
             onPressed: () async {
               final result = await Navigator.push(
@@ -111,9 +82,7 @@ class _AccountListScreenState extends State<AccountListScreen> {
               itemBuilder: (context, index) {
                 final account = accounts[index];
                 return Card(
-                  margin: const EdgeInsets.symmetric(
-                    vertical: 4.0,
-                  ), // Card의 외부 마진 추가
+                  margin: const EdgeInsets.symmetric(vertical: 4.0),
                   child: ListTile(
                     contentPadding: const EdgeInsets.all(16.0),
                     title: Text(
@@ -121,6 +90,7 @@ class _AccountListScreenState extends State<AccountListScreen> {
                       style: const TextStyle(
                         fontSize: 18.0,
                         fontWeight: FontWeight.bold,
+                        color: Colors.black, // 명시적으로 검은색 지정 유지
                       ),
                     ),
                     subtitle: Column(
@@ -131,13 +101,21 @@ class _AccountListScreenState extends State<AccountListScreen> {
                                   account.description!.isNotEmpty
                               ? account.description!
                               : '설명 없음',
+                          style: const TextStyle(
+                            color: Colors.black87,
+                          ), // 명시적으로 검은색 지정 유지
                         ),
-                        // DateFormat을 사용하기 위해 intl 패키지 임포트 필요
                         Text(
                           '생성일: ${DateFormat('yyyy-MM-dd').format(DateTime.parse(account.createdAt))}',
+                          style: const TextStyle(
+                            color: Colors.black54,
+                          ), // 명시적으로 검은색 지정 유지
                         ),
                         Text(
                           '최근 업데이트: ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.parse(account.updatedAt))}',
+                          style: const TextStyle(
+                            color: Colors.black54,
+                          ), // 명시적으로 검은색 지정 유지
                         ),
                       ],
                     ),
@@ -171,7 +149,6 @@ class _AccountListScreenState extends State<AccountListScreen> {
                         );
                       },
                     ),
-                    // === 이 부분이 수정되었습니다: 계좌 탭 시 상세 화면으로 이동 ===
                     onTap: () async {
                       final result = await Navigator.push(
                         context,
@@ -180,13 +157,10 @@ class _AccountListScreenState extends State<AccountListScreen> {
                               AccountDetailScreen(account: account),
                         ),
                       );
-                      // AccountDetailScreen에서 돌아왔을 때 (예: 종목이 추가/삭제된 경우)
-                      // 계좌 목록을 새로고침하여 최신 상태를 반영
                       if (result == true) {
                         _loadAccounts();
                       }
                     },
-                    // ========================================================
                   ),
                 );
               },
