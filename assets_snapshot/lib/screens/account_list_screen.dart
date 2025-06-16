@@ -6,6 +6,10 @@ import 'package:assets_snapshot/models/account.dart';
 import 'package:assets_snapshot/screens/add_account_screen.dart';
 import 'package:provider/provider.dart'; // Provider 패키지 임포트
 import 'package:assets_snapshot/providers/theme_provider.dart'; // ThemeProvider 임포트
+import 'package:intl/intl.dart'; // DateFormat 사용을 위해 추가
+
+// 새로 추가될 계좌 상세 화면 임포트
+import 'package:assets_snapshot/screens/account_detail_screen.dart';
 
 class AccountListScreen extends StatefulWidget {
   const AccountListScreen({super.key});
@@ -31,7 +35,12 @@ class _AccountListScreenState extends State<AccountListScreen> {
   }
 
   void _deleteAccount(int id) async {
-    await _dbHelper.deleteAccount(id);
+    // 계좌 삭제 시 해당 계좌에 속한 모든 종목도 함께 삭제
+    // ON DELETE CASCADE 제약 조건 때문에 DB에서 자동으로 삭제되지만,
+    // 명시적으로 호출하여 디버그 로그를 남기거나 추가 작업이 필요할 때 사용 가능
+    await _dbHelper.deleteAllAssetsByAccountId(id); // 해당 계좌의 모든 종목 삭제
+    await _dbHelper.deleteAccount(id); // 계좌 삭제
+
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('계좌가 삭제되었습니다.')));
@@ -99,6 +108,9 @@ class _AccountListScreenState extends State<AccountListScreen> {
               itemBuilder: (context, index) {
                 final account = accounts[index];
                 return Card(
+                  margin: const EdgeInsets.symmetric(
+                    vertical: 4.0,
+                  ), // Card의 외부 마진 추가
                   child: ListTile(
                     contentPadding: const EdgeInsets.all(16.0),
                     title: Text(
@@ -108,7 +120,24 @@ class _AccountListScreenState extends State<AccountListScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    subtitle: Text(account.description ?? '설명 없음'),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          account.description != null &&
+                                  account.description!.isNotEmpty
+                              ? account.description!
+                              : '설명 없음',
+                        ),
+                        // DateFormat을 사용하기 위해 intl 패키지 임포트 필요
+                        Text(
+                          '생성일: ${DateFormat('yyyy-MM-dd').format(DateTime.parse(account.createdAt))}',
+                        ),
+                        Text(
+                          '최근 업데이트: ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.parse(account.updatedAt))}',
+                        ),
+                      ],
+                    ),
                     trailing: IconButton(
                       icon: const Icon(Icons.delete, color: Colors.redAccent),
                       onPressed: () {
@@ -139,13 +168,22 @@ class _AccountListScreenState extends State<AccountListScreen> {
                         );
                       },
                     ),
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('${account.name} 상세 정보 보기 (아직 미구현)'),
+                    // === 이 부분이 수정되었습니다: 계좌 탭 시 상세 화면으로 이동 ===
+                    onTap: () async {
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              AccountDetailScreen(account: account),
                         ),
                       );
+                      // AccountDetailScreen에서 돌아왔을 때 (예: 종목이 추가/삭제된 경우)
+                      // 계좌 목록을 새로고침하여 최신 상태를 반영
+                      if (result == true) {
+                        _loadAccounts();
+                      }
                     },
+                    // ========================================================
                   ),
                 );
               },
