@@ -41,6 +41,9 @@ class _AccountListScreenState extends State<AccountListScreen> {
     await _dbHelper.deleteAllAssetsByAccountId(id); // 해당 계좌의 모든 종목 삭제
     await _dbHelper.deleteAccount(id); // 계좌 삭제
 
+    // 비동기 작업 후 BuildContext를 사용하기 전에 위젯이 마운트된 상태인지 확인
+    if (!mounted) return;
+
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('계좌가 삭제되었습니다.')));

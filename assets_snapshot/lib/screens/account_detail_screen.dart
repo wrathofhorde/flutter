@@ -37,6 +37,8 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
       );
     } catch (e) {
       debugPrint('Failed to load assets: $e');
+      // 오류 스낵바 표시 전에도 mounted 체크
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('종목을 불러오는 데 실패했습니다: $e')));
@@ -64,12 +66,15 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
   Future<void> _deleteAsset(int assetId) async {
     try {
       await _dbHelper.deleteAsset(assetId);
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('종목이 삭제되었습니다.')));
       _loadAssets(); // 삭제 후 리스트 갱신
     } catch (e) {
       debugPrint('Failed to delete asset: $e');
+      // 오류 스낵바 표시 전에도 mounted 체크
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('종목 삭제 실패: $e')));
