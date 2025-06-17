@@ -1,3 +1,4 @@
+// lib/screens/account_detail_screen.dart
 import 'package:flutter/material.dart';
 import 'package:assets_snapshot/models/account.dart';
 import 'package:assets_snapshot/database/database_helper.dart';
@@ -44,10 +45,6 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
     }
   }
 
-  // 이제 _navigateToAddAssetScreen()과 _deleteAsset()은 각 카드 위젯 내부에서 처리되므로 여기서는 필요 없습니다.
-  // 다만, _navigateToAddAssetScreen은 AddAssetCard가 직접 호출하므로 이 메서드는 AccountDetailScreen에서 제거 가능합니다.
-  // _deleteAsset은 AssetCard 내부로 옮겼습니다.
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -76,8 +73,10 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
           final asset = _assets[index];
           return AssetCard(
             asset: asset,
-            accountId: widget.account.id!, // accountId 전달 (수정 화면에서 필요)
-            onRefreshAssets: _loadAssets, // 목록 갱신 콜백 전달
+            // accountId는 AssetCard 내부에서 asset.accountId로 접근 가능하므로 불필요합니다.
+            // onRefreshAssets 대신 AssetCard가 요구하는 콜백으로 변경합니다.
+            onAssetUpdated: _loadAssets, // !!! 추가: 종목 업데이트 시 _loadAssets 호출 !!!
+            onAssetDeleted: _loadAssets, // !!! 추가: 종목 삭제 시 _loadAssets 호출 !!!
           );
         },
       ),
