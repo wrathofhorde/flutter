@@ -193,21 +193,13 @@ class _AssetCalculatorScreenState extends State<AssetCalculatorScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '${widget.asset.name} (${widget.asset.assetType.name})',
+                '${widget.asset.name} (${widget.asset.assetType.name} |'
+                ' ${_assetLocationToKorean(widget.asset.assetLocation)})',
                 style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              // 여기에 assetLocation도 함께 표시할 수 있습니다.
-              // 예: Text('${widget.asset.name} (${widget.asset.assetType.name} | ${_assetLocationToKorean(widget.asset.assetLocation)})'),
-              // _assetLocationToKorean 헬퍼 함수가 필요합니다.
-              // String _assetLocationToKorean(AssetLocation location) {
-              //   switch (location) {
-              //     case AssetLocation.domestic: return '국내';
-              //     case AssetLocation.overseas: return '해외';
-              //   }
-              // }
               if (widget.asset.memo != null && widget.asset.memo!.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 4.0),
@@ -225,6 +217,7 @@ class _AssetCalculatorScreenState extends State<AssetCalculatorScreen> {
                   border: OutlineInputBorder(),
                   hintText: '정수만 입력하세요 (예: 100000)',
                 ),
+                style: TextStyle(color: Colors.black), // 입력되는 글씨 색상을 검정색으로 명시
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return '매수금액을 입력해주세요.';
@@ -250,6 +243,7 @@ class _AssetCalculatorScreenState extends State<AssetCalculatorScreen> {
                   border: OutlineInputBorder(),
                   hintText: '정수만 입력하세요 (예: 120000)',
                 ),
+                style: TextStyle(color: Colors.black), // 입력되는 글씨 색상을 검정색으로 명시
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return '평가금액을 입력해주세요.';
@@ -287,6 +281,15 @@ class _AssetCalculatorScreenState extends State<AssetCalculatorScreen> {
         ),
       ),
     );
+  }
+
+  String _assetLocationToKorean(AssetLocation location) {
+    switch (location) {
+      case AssetLocation.domestic:
+        return '국내';
+      case AssetLocation.overseas:
+        return '해외';
+    }
   }
 
   Widget _buildResultCard({
