@@ -13,6 +13,7 @@ class DatabaseHelper {
   DatabaseHelper._internal();
 
   static Database? _database;
+  static const int _databaseVersion = 4; // !!! 데이터베이스 버전 4로 증가 !!!
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -26,7 +27,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1, // 데이터베이스 버전은 1로 유지 (테이블 스키마는 _onCreate에서 처리)
+      version: _databaseVersion,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -52,6 +53,9 @@ class DatabaseHelper {
         name TEXT NOT NULL,
         asset_type TEXT NOT NULL,
         memo TEXT,
+        purchasePrice INTEGER,
+        currentValue INTEGER,
+        lastProfitRate REAL,
         UNIQUE(account_id, name),
         FOREIGN KEY (account_id) REFERENCES Accounts(id) ON DELETE CASCADE
       )
@@ -73,16 +77,18 @@ class DatabaseHelper {
       )
     ''');
 
-    // AssetSnapshots Table
+    // !!! AssetSnapshots Table 수정 !!!
     await db.execute('''
       CREATE TABLE IF NOT EXISTS AssetSnapshots(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        snapshot_date TEXT NOT NULL UNIQUE,
-        total_evaluated_amount INTEGER NOT NULL,
-        total_purchase_amount INTEGER NOT NULL,
-        total_profit_loss INTEGER NOT NULL,
-        overall_yield_percentage REAL NOT NULL,
-        overall_yield_change_percentage REAL
+        asset_id INTEGER NOT NULL,  -- 외래 키: 어떤 종목의 스냅샷인지
+        snapshot_date TEXT NOT NULL,
+        purchase_price INTEGER NOT NULL,   -- 해당 스냅샷 시점의 매수금액
+        current_value INTEGER NOT NULL,    -- 해당 스냅샷 시점의 평가금액
+        profit_rate REAL NOT NULL,         -- 해당 스냅샷 시점의 수익률
+        profit_rate_change REAL,           -- 해당 스냅샷 시점의 수익률 변화율
+        UNIQUE(asset_id, snapshot_date),   -- 특정 종목의 특정 날짜 스냅샷은 유일해야 함
+        FOREIGN KEY (asset_id) REFERENCES Assets(id) ON DELETE CASCADE
       )
     ''');
 
@@ -90,11 +96,33 @@ class DatabaseHelper {
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Assets 테이블 스키마가 기존에 존재했다면, 변경 사항에 대한 마이그레이션 로직이 필요할 수 있습니다.
-    // 현재는 처음부터 Assets 테이블이 _onCreate에 있었으므로 이 부분은 비워둡니다.
-    // 만약 Asset 모델에 새로운 컬럼(quantity, averagePrice 등)을 추가한다면
-    // 여기에 ALTER TABLE 문을 사용하여 컬럼을 추가하는 로직을 작성해야 합니다.
     debugPrint("Database upgraded from version $oldVersion to $newVersion");
+
+    // 이전 버전에서 현재 버전으로 업그레이드 시
+    // 중요: 개발 단계에서만 테이블 드롭 후 재생성을 사용하세요.
+    // 실제 앱에서는 ALTER TABLE을 사용하여 데이터 유실을 방지해야 합니다.
+    // 현재는 버전 4로 올리면서 AssetSnapshots 테이블 스키마를 변경하므로,
+    // 해당 테이블을 드롭하고 재생성하는 것이 가장 간단합니다.
+    if (oldVersion < 4) {
+      await db.execute('DROP TABLE IF EXISTS AssetSnapshots');
+      // Assets 테이블의 컬럼 타입 변경 (REAL -> INTEGER)은 이미 버전 3에서 처리했으므로
+      // 여기서는 AssetSnapshots만 다시 생성하면 됩니다.
+      // 만약 Assets 테이블의 컬럼 타입도 변경해야 한다면, Assets 테이블도 DROP/CREATE 합니다.
+      // 여기서는 AssetSnapshots 테이블의 스키마 변경만 반영합니다.
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS AssetSnapshots(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          asset_id INTEGER NOT NULL,
+          snapshot_date TEXT NOT NULL,
+          purchase_price INTEGER NOT NULL,
+          current_value INTEGER NOT NULL,
+          profit_rate REAL NOT NULL,
+          profit_rate_change REAL,
+          UNIQUE(asset_id, snapshot_date),
+          FOREIGN KEY (asset_id) REFERENCES Assets(id) ON DELETE CASCADE
+        )
+      ''');
+    }
   }
 
   Future<void> close() async {

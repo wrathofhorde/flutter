@@ -23,7 +23,7 @@ void main() async {
     await windowManager.ensureInitialized(); // <-- windowManager 초기화
 
     WindowOptions windowOptions = const WindowOptions(
-      size: Size(800, 600), // 초기 창 크기 설정 (선택 사항)
+      size: Size(1024, 768), // 초기 창 크기 설정 (선택 사항)
       center: true, // 창을 화면 중앙에 위치 (선택 사항)
       // skipTaskbar: false, // 작업 표시줄에 표시 (기본값)
       titleBarStyle: TitleBarStyle.normal, // 타이틀 바 스타일
@@ -87,7 +87,7 @@ class _MyAppState extends State<MyApp> {
 
         cardTheme: CardThemeData(
           color: Colors.white, // 카드 배경색을 흰색으로 고정
-          margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          margin: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
           elevation: 2.0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8.0),

@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:assets_snapshot/database/database_helper.dart';
 import 'package:assets_snapshot/models/account.dart';
-import 'package:assets_snapshot/screens/add_account_screen.dart';
-// import 'package:provider/provider.dart'; // Provider 패키지 임포트 제거
-// import 'package:assets_snapshot/providers/theme_provider.dart'; // ThemeProvider 임포트 제거
-import 'package:intl/intl.dart';
 
-import 'package:assets_snapshot/screens/account_detail_screen.dart';
+// 분리한 위젯 임포트
+import 'package:assets_snapshot/widgets/account_card.dart';
+import 'package:assets_snapshot/widgets/add_account_card.dart';
 
 class AccountListScreen extends StatefulWidget {
   const AccountListScreen({super.key});
@@ -35,7 +33,7 @@ class _AccountListScreenState extends State<AccountListScreen> {
     await _dbHelper.deleteAllAssetsByAccountId(id);
     await _dbHelper.deleteAccount(id);
 
-    if (!mounted) return; // BuildContext 경고 방지
+    if (!mounted) return;
 
     ScaffoldMessenger.of(
       context,
@@ -48,23 +46,7 @@ class _AccountListScreenState extends State<AccountListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('나의 계좌 목록'),
-        actions: [
-          IconButton(
-            tooltip: "계좌 추가",
-            icon: const Icon(Icons.add),
-            onPressed: () async {
-              final result = await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const AddAccountScreen(),
-                ),
-              );
-              if (result == true) {
-                _loadAccounts();
-              }
-            },
-          ),
-        ],
+        actions: const [], // AppBar의 "+" 버튼은 제거되었으므로 비워둡니다.
       ),
       body: FutureBuilder<List<Account>>(
         future: _accountsFuture,
@@ -73,96 +55,34 @@ class _AccountListScreenState extends State<AccountListScreen> {
             return const Center(child: CircularProgressIndicator());
           } else if (snapshot.hasError) {
             return Center(child: Text('오류 발생: ${snapshot.error}'));
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('아직 등록된 계좌가 없습니다. 새 계좌를 추가해주세요!'));
           } else {
-            final List<Account> accounts = snapshot.data!;
-            return ListView.builder(
-              itemCount: accounts.length,
+            final List<Account> accounts = snapshot.data ?? [];
+            final int itemCount = accounts.length + 1;
+
+            return GridView.builder(
+              padding: const EdgeInsets.all(2.0),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 5,
+                crossAxisSpacing: 2,
+                mainAxisSpacing: 2,
+                childAspectRatio: 1.0,
+              ),
+              itemCount: itemCount,
               itemBuilder: (context, index) {
-                final account = accounts[index];
-                return Card(
-                  margin: const EdgeInsets.symmetric(vertical: 4.0),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(16.0),
-                    title: Text(
-                      account.name,
-                      style: const TextStyle(
-                        fontSize: 18.0,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black, // 명시적으로 검은색 지정 유지
-                      ),
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          account.description != null &&
-                                  account.description!.isNotEmpty
-                              ? account.description!
-                              : '설명 없음',
-                          style: const TextStyle(
-                            color: Colors.black87,
-                          ), // 명시적으로 검은색 지정 유지
-                        ),
-                        Text(
-                          '생성일: ${DateFormat('yyyy-MM-dd').format(DateTime.parse(account.createdAt))}',
-                          style: const TextStyle(
-                            color: Colors.black54,
-                          ), // 명시적으로 검은색 지정 유지
-                        ),
-                        Text(
-                          '최근 업데이트: ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.parse(account.updatedAt))}',
-                          style: const TextStyle(
-                            color: Colors.black54,
-                          ), // 명시적으로 검은색 지정 유지
-                        ),
-                      ],
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.redAccent),
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (ctx) => AlertDialog(
-                            title: const Text('계좌 삭제'),
-                            content: Text(
-                              '${account.name} 계좌를 정말 삭제하시겠습니까? 관련 자산 및 스냅샷 정보도 모두 삭제됩니다.',
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.of(ctx).pop(),
-                                child: const Text('취소'),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  _deleteAccount(account.id!);
-                                  Navigator.of(ctx).pop();
-                                },
-                                child: const Text(
-                                  '삭제',
-                                  style: TextStyle(color: Colors.red),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                    onTap: () async {
-                      final result = await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              AccountDetailScreen(account: account),
-                        ),
-                      );
-                      if (result == true) {
-                        _loadAccounts();
-                      }
-                    },
-                  ),
-                );
+                if (index < accounts.length) {
+                  // 기존 계좌 타일은 AccountCard 위젯 사용
+                  final account = accounts[index];
+                  return AccountCard(
+                    account: account,
+                    onDelete: () => _deleteAccount(account.id!), // 삭제 콜백 연결
+                    onRefreshAccounts: _loadAccounts, // 계좌 목록 갱신 콜백 연결
+                  );
+                } else {
+                  // "새 계좌 추가" 타일은 AddAccountCard 위젯 사용
+                  return AddAccountCard(
+                    onRefreshAccounts: _loadAccounts, // 계좌 목록 갱신 콜백 연결
+                  );
+                }
               },
             );
           }
