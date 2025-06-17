@@ -1,15 +1,12 @@
 // lib/screens/add_asset_screen.dart
-
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:assets_snapshot/models/asset.dart';
 import 'package:assets_snapshot/database/database_helper.dart';
 
 class AddAssetScreen extends StatefulWidget {
   final int accountId;
-  final Asset? asset; // 수정할 Asset 객체 (선택 사항)
+  final Asset? asset; // 기존 종목을 수정할 경우 사용 (null이면 새로운 종목)
 
-  // asset이 있으면 수정 모드, 없으면 추가 모드
   const AddAssetScreen({super.key, required this.accountId, this.asset});
 
   @override
@@ -20,20 +17,25 @@ class _AddAssetScreenState extends State<AddAssetScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _memoController = TextEditingController();
-  AssetType _selectedAssetType = AssetType.stock;
+  AssetType? _selectedAssetType;
+  AssetLocation? _selectedAssetLocation; // !!! 새 필드 추가 !!!
 
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
-  bool get _isEditing => widget.asset != null; // 수정 모드인지 확인하는 getter
+  bool get _isEditing => widget.asset != null;
 
   @override
   void initState() {
     super.initState();
     if (_isEditing) {
-      // 수정 모드인 경우 기존 데이터로 필드 초기화
       _nameController.text = widget.asset!.name;
       _memoController.text = widget.asset!.memo ?? '';
       _selectedAssetType = widget.asset!.assetType;
+      _selectedAssetLocation = widget.asset!.assetLocation; // !!! 기존 값 로드 !!!
+    } else {
+      // 새로운 종목 추가 시 기본값 설정 (선택 사항)
+      _selectedAssetType = AssetType.stock; // 기본 종목 유형
+      _selectedAssetLocation = AssetLocation.domestic; // !!! 기본 투자 지역 (국내) !!!
     }
   }
 
@@ -44,127 +46,163 @@ class _AddAssetScreenState extends State<AddAssetScreen> {
     super.dispose();
   }
 
-  // 종목을 추가하거나 업데이트하는 메서드
   Future<void> _saveAsset() async {
     if (_formKey.currentState!.validate()) {
-      final String now = DateFormat(
-        'yyyy-MM-dd HH:mm:ss',
-      ).format(DateTime.now());
-
-      final assetToSave = Asset(
-        id: _isEditing ? widget.asset!.id : null, // 수정 모드면 기존 ID 사용
+      final asset = Asset(
+        id: _isEditing ? widget.asset!.id : null,
         accountId: widget.accountId,
-        name: _nameController.text.trim(),
-        assetType: _selectedAssetType,
-        memo: _memoController.text.trim().isNotEmpty
-            ? _memoController.text.trim()
-            : null,
+        name: _nameController.text,
+        assetType: _selectedAssetType!,
+        assetLocation: _selectedAssetLocation!, // !!! 선택된 지역 저장 !!!
+        memo: _memoController.text.isNotEmpty ? _memoController.text : null,
+        // purchasePrice, currentValue, lastProfitRate는 AssetCalculatorScreen에서 관리되므로 여기서는 null (혹은 기본값)
+        purchasePrice: _isEditing ? widget.asset!.purchasePrice : null,
+        currentValue: _isEditing ? widget.asset!.currentValue : null,
+        lastProfitRate: _isEditing ? widget.asset!.lastProfitRate : null,
       );
 
       try {
         if (_isEditing) {
-          // 수정 모드: 업데이트
-          await _dbHelper.updateAsset(assetToSave);
-          // 비동기 작업 후 BuildContext를 사용하기 전에 위젯이 마운트된 상태인지 확인
+          await _dbHelper.updateAsset(asset);
           if (!mounted) return;
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(content: Text('종목이 성공적으로 수정되었습니다!')));
+          ).showSnackBar(const SnackBar(content: Text('종목 정보가 업데이트되었습니다.')));
         } else {
-          // 추가 모드: 삽입
-          await _dbHelper.insertAsset(assetToSave);
-          // 비동기 작업 후 BuildContext를 사용하기 전에 위젯이 마운트된 상태인지 확인
+          await _dbHelper.insertAsset(asset);
           if (!mounted) return;
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(content: Text('종목이 성공적으로 추가되었습니다!')));
+          ).showSnackBar(const SnackBar(content: Text('새로운 종목이 추가되었습니다.')));
         }
-        // Navigator.pop 전에 한 번 더 mounted 체크 (선택 사항이지만 안전성 증대)
-        if (!mounted) return;
-        Navigator.pop(context, true); // 성공 시 true 반환하여 이전 화면 갱신
+        Navigator.of(context).pop(true); // 성공 시 true 반환
       } catch (e) {
-        String action = _isEditing ? '수정' : '추가';
-        String errorMessage = '종목 $action 실패: $e';
-        if (e.toString().contains('UNIQUE constraint failed')) {
-          errorMessage = '이미 해당 계좌에 같은 이름의 종목이 존재합니다.';
-        }
-        // 오류 스낵바 표시 전에도 mounted 체크
+        debugPrint('Failed to save asset: $e');
         if (!mounted) return;
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(errorMessage)));
-        debugPrint('Error $action asset: $e');
+        ).showSnackBar(SnackBar(content: Text('종목 저장 실패: $e')));
       }
+    }
+  }
+
+  // AssetType enum 값을 한글 텍스트로 변환
+  String _assetTypeToKorean(AssetType type) {
+    switch (type) {
+      case AssetType.stock:
+        return '주식';
+      case AssetType.crypto:
+        return '가상화폐';
+      case AssetType.deposit:
+        return '예금';
+      case AssetType.bond:
+        return '채권';
+      case AssetType.fund:
+        return '펀드';
+      case AssetType.etf:
+        return 'ETF';
+      case AssetType.wrap:
+        return 'Wrap';
+      case AssetType.other:
+        return '기타';
+    }
+  }
+
+  // AssetLocation enum 값을 한글 텍스트로 변환
+  String _assetLocationToKorean(AssetLocation location) {
+    switch (location) {
+      case AssetLocation.domestic:
+        return '국내';
+      case AssetLocation.overseas:
+        return '해외';
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEditing ? '종목 수정' : '새 종목 추가'), // 앱바 타이틀 변경
-      ),
-      body: Padding(
+      appBar: AppBar(title: Text(_isEditing ? '종목 수정' : '새 종목 추가')),
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               TextFormField(
                 controller: _nameController,
-                decoration: InputDecoration(
-                  labelText: '종목명 (필수)',
+                decoration: const InputDecoration(
+                  labelText: '종목명',
                   border: OutlineInputBorder(),
-                  filled: true,
+                  labelStyle: TextStyle(color: Colors.black), // 라벨 색상
+                  hintStyle: TextStyle(color: Colors.grey), // 힌트 텍스트 색상
+                  filled: true, // 배경 채우기 활성화
+                  fillColor: Colors.white, // 배경 색상 (필요시 조절)
                 ),
-                style: TextStyle(color: Colors.black),
+                style: const TextStyle(color: Colors.black),
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
+                  if (value == null || value.isEmpty) {
                     return '종목명을 입력해주세요.';
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 16.0),
+              // AssetType 선택 드롭다운
               DropdownButtonFormField<AssetType>(
                 value: _selectedAssetType,
-                decoration: InputDecoration(
-                  labelText: '종목 유형 (필수)',
+                decoration: const InputDecoration(
+                  labelText: '자산 유형',
                   border: OutlineInputBorder(),
-                  filled: true,
+                  labelStyle: TextStyle(color: Colors.black), // 라벨 색상
+                  hintStyle: TextStyle(color: Colors.grey), // 힌트 텍스트 색상
+                  filled: true, // 배경 채우기 활성화
+                  fillColor: Colors.white, // 배경 색상 (필요시 조절)
                 ),
                 items: AssetType.values.map((type) {
-                  String displayText;
-                  if (type == AssetType.etf) {
-                    displayText = 'ETF';
-                  } else if (type == AssetType.crypto) {
-                    displayText = 'Crypto'; // 'Crypto'로 표시
-                  } else if (type == AssetType.wrap) {
-                    // 'wrap'을 'Wrap'으로 표시
-                    displayText = 'Wrap';
-                  } else {
-                    displayText =
-                        type.name[0].toUpperCase() + type.name.substring(1);
-                  }
                   return DropdownMenuItem(
                     value: type,
-                    child: Text(
-                      displayText,
-                      style: TextStyle(color: Colors.black),
-                    ),
+                    child: Text(_assetTypeToKorean(type)), // 한글 표시
                   );
                 }).toList(),
-                onChanged: (AssetType? newValue) {
-                  if (newValue != null) {
-                    setState(() {
-                      _selectedAssetType = newValue;
-                    });
-                  }
+                onChanged: (value) {
+                  setState(() {
+                    _selectedAssetType = value;
+                  });
                 },
                 validator: (value) {
                   if (value == null) {
-                    return '종목 유형을 선택해주세요.';
+                    return '자산 유형을 선택해주세요.';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16.0),
+              // !!! AssetLocation 선택 드롭다운 추가 !!!
+              DropdownButtonFormField<AssetLocation>(
+                value: _selectedAssetLocation,
+                decoration: const InputDecoration(
+                  labelText: '투자 지역',
+                  border: OutlineInputBorder(),
+                  labelStyle: TextStyle(color: Colors.black), // 라벨 색상
+                  hintStyle: TextStyle(color: Colors.grey), // 힌트 텍스트 색상
+                  filled: true, // 배경 채우기 활성화
+                  fillColor: Colors.white, // 배경 색상 (필요시 조절)
+                ),
+                items: AssetLocation.values.map((location) {
+                  return DropdownMenuItem(
+                    value: location,
+                    child: Text(_assetLocationToKorean(location)), // 한글 표시
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedAssetLocation = value;
+                  });
+                },
+                validator: (value) {
+                  if (value == null) {
+                    return '투자 지역을 선택해주세요.';
                   }
                   return null;
                 },
@@ -172,23 +210,26 @@ class _AddAssetScreenState extends State<AddAssetScreen> {
               const SizedBox(height: 16.0),
               TextFormField(
                 controller: _memoController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: '메모 (선택 사항)',
                   border: OutlineInputBorder(),
-                  filled: true,
+                  labelStyle: TextStyle(color: Colors.black), // 라벨 색상
+                  hintStyle: TextStyle(color: Colors.grey), // 힌트 텍스트 색상
+                  filled: true, // 배경 채우기 활성화
+                  fillColor: Colors.white, // 배경 색상 (필요시 조절)
                 ),
-                style: TextStyle(color: Colors.black),
                 maxLines: 3,
+                style: const TextStyle(color: Colors.black),
               ),
               const SizedBox(height: 24.0),
               ElevatedButton(
-                onPressed: _saveAsset, // _addAsset 대신 _saveAsset 호출
+                onPressed: _saveAsset,
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12.0),
+                  minimumSize: const Size.fromHeight(50),
                 ),
                 child: Text(
-                  _isEditing ? '종목 수정하기' : '종목 추가하기', // 버튼 텍스트 변경
-                  style: TextStyle(fontSize: 18.0),
+                  _isEditing ? '종목 정보 업데이트' : '종목 추가하기',
+                  style: const TextStyle(fontSize: 18),
                 ),
               ),
             ],
