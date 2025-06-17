@@ -1,29 +1,17 @@
 // lib/models/asset.dart
 
-// 1. 자산(종목)의 투자 지역을 정의하는 enum 추가
-enum AssetLocation {
-  domestic, // 국내
-  overseas, // 해외
-}
+import 'package:assets_snapshot/models/account.dart'; // Account 모델 임포트 (필요하다면)
 
-// 기존 AssetType enum (유지)
-enum AssetType {
-  stock, // 주식
-  crypto, // 가상화폐
-  deposit, // 예금
-  bond, // 채권
-  fund, // 펀드
-  etf, // ETF
-  wrap, // Wrap
-  other, // 기타
-}
+enum AssetType { stock, crypto, deposit, bond, fund, etf, wrap, other }
+
+enum AssetLocation { domestic, overseas }
 
 class Asset {
   int? id;
-  int accountId; // 어느 계좌에 속하는지
+  int accountId; // 주의: Dart 필드명은 camelCase (accountId)
   String name;
   AssetType assetType;
-  AssetLocation assetLocation;
+  AssetLocation assetLocation; // 새 컬럼 추가
   String? memo;
   int? purchasePrice;
   int? currentValue;
@@ -34,20 +22,21 @@ class Asset {
     required this.accountId,
     required this.name,
     required this.assetType,
-    required this.assetLocation,
+    this.assetLocation = AssetLocation.domestic, // 기본값 설정
     this.memo,
     this.purchasePrice,
     this.currentValue,
     this.lastProfitRate,
   });
 
+  // Map으로 변환
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'accountId': accountId,
+      'account_id': accountId, // !!! 여기서 'account_id'로 변경 !!!
       'name': name,
-      'assetType': assetType.name,
-      'asset_location': assetLocation.name,
+      'asset_type': assetType.toString().split('.').last,
+      'asset_location': assetLocation.toString().split('.').last, // 새 컬럼
       'memo': memo,
       'purchasePrice': purchasePrice,
       'currentValue': currentValue,
@@ -55,31 +44,60 @@ class Asset {
     };
   }
 
+  // Map에서 Asset 객체 생성
   factory Asset.fromMap(Map<String, dynamic> map) {
     return Asset(
       id: map['id'] as int?,
-      accountId: map['accountId'] as int,
+      accountId: map['account_id'] as int, // !!! 여기서 'account_id'로 변경 !!!
       name: map['name'] as String,
       assetType: AssetType.values.firstWhere(
-        (e) => e.name == map['assetType'],
-        orElse: () => AssetType.other,
+        (e) => e.toString().split('.').last == map['asset_type'],
       ),
-      // !!! fromMap()에 추가: String에서 enum으로 변환. 기본값 'domestic' 처리 !!!
       assetLocation: AssetLocation.values.firstWhere(
-        (e) =>
-            e.name ==
-            map['asset_location'], // 'domestic' 또는 'overseas' 문자열을 enum으로
-        orElse: () => AssetLocation.domestic, // 찾지 못할 경우 기본값 'domestic'
+        (e) => e.toString().split('.').last == map['asset_location'],
+        orElse: () => AssetLocation.domestic, // 기본값 처리
       ),
       memo: map['memo'] as String?,
-      purchasePrice: map['purchasePrice'] as int?,
-      currentValue: map['currentValue'] as int?,
-      lastProfitRate: map['lastProfitRate'] as double?,
+      purchasePrice: map['purchasePrice'] != null
+          ? (map['purchasePrice'] as num).toInt()
+          : null,
+      currentValue: map['currentValue'] != null
+          ? (map['currentValue'] as num).toInt()
+          : null,
+      lastProfitRate: map['lastProfitRate'] != null
+          ? (map['lastProfitRate'] as num).toDouble()
+          : null,
     );
   }
 
+  // toString (디버깅 용이)
   @override
   String toString() {
-    return 'Asset(id: $id, accountId: $accountId, name: $name, assetType: ${assetType.name}, assetLocation: ${assetLocation.name}, memo: $memo, purchasePrice: $purchasePrice, currentValue: $currentValue, lastProfitRate: $lastProfitRate)';
+    return 'Asset(id: $id, accountId: $accountId, name: $name, assetType: $assetType, assetLocation: $assetLocation, memo: $memo, purchasePrice: $purchasePrice, currentValue: $currentValue, lastProfitRate: $lastProfitRate)';
+  }
+
+  // 데이터 업데이트를 위한 copyWith 메서드
+  Asset copyWith({
+    int? id,
+    int? accountId,
+    String? name,
+    AssetType? assetType,
+    AssetLocation? assetLocation,
+    String? memo,
+    int? purchasePrice,
+    int? currentValue,
+    double? lastProfitRate,
+  }) {
+    return Asset(
+      id: id ?? this.id,
+      accountId: accountId ?? this.accountId,
+      name: name ?? this.name,
+      assetType: assetType ?? this.assetType,
+      assetLocation: assetLocation ?? this.assetLocation,
+      memo: memo ?? this.memo,
+      purchasePrice: purchasePrice ?? this.purchasePrice,
+      currentValue: currentValue ?? this.currentValue,
+      lastProfitRate: lastProfitRate ?? this.lastProfitRate,
+    );
   }
 }

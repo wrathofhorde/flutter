@@ -159,6 +159,12 @@ class _AddAssetScreenState extends State<AddAssetScreen> {
                   filled: true, // 배경 채우기 활성화
                   fillColor: Colors.white, // 배경 색상 (필요시 조절)
                 ),
+                dropdownColor: Colors.white, // !!! 드롭다운 메뉴의 배경색 설정 !!!
+                iconEnabledColor: Colors.black, // 드롭다운 아이콘 (화살표) 색상
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontSize: 16,
+                ), // !!! 선택된 항목의 텍스트 색상 !!!
                 items: AssetType.values.map((type) {
                   return DropdownMenuItem(
                     value: type,
@@ -189,6 +195,12 @@ class _AddAssetScreenState extends State<AddAssetScreen> {
                   filled: true, // 배경 채우기 활성화
                   fillColor: Colors.white, // 배경 색상 (필요시 조절)
                 ),
+                dropdownColor: Colors.white, // !!! 드롭다운 메뉴의 배경색 설정 !!!
+                iconEnabledColor: Colors.black, // 드롭다운 아이콘 (화살표) 색상
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontSize: 16,
+                ), // !!! 선택된 항목의 텍스트 색상 !!!
                 items: AssetLocation.values.map((location) {
                   return DropdownMenuItem(
                     value: location,
