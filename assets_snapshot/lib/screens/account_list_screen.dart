@@ -139,171 +139,155 @@ class _AccountListScreenState extends State<AccountListScreen> {
         title: const Text('계좌 목록'),
         actions: const [], // 앱바의 + 아이콘 제거
       ),
-      body: _accounts.isEmpty
-          ? const Center(
-              child: Text(
-                '등록된 계좌가 없습니다.\n새 계좌를 추가해주세요.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-            )
-          : GridView.builder(
-              // GridView.builder 유지
-              padding: const EdgeInsets.all(8.0),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4, // 한 줄에 2개의 계좌 카드를 표시
-                crossAxisSpacing: 8.0,
-                mainAxisSpacing: 8.0,
-                childAspectRatio: 1, // 카드 비율 조정
-              ),
-              itemCount: _accounts.length + 1, // 계좌 목록 + "새 계좌 추가" 타일
-              itemBuilder: (context, index) {
-                if (index == _accounts.length) {
-                  // 마지막 인덱스에 "새 계좌 추가" 타일 배치
-                  return AddAccountCard(
-                    onRefreshAccounts: _onAccountUpdated, // 계좌 목록 갱신 콜백 전달
-                  );
-                }
+      // 이전의 _accounts.isEmpty 조건문을 제거하고 항상 GridView.builder를 렌더링
+      body: GridView.builder(
+        padding: const EdgeInsets.all(8.0),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 4, // 한 줄에 4개의 계좌 카드를 표시
+          crossAxisSpacing: 8.0,
+          mainAxisSpacing: 8.0,
+          childAspectRatio: 1, // 카드 비율 조정
+        ),
+        itemCount: _accounts.length + 1, // 계좌 목록 + "새 계좌 추가" 타일
+        itemBuilder: (context, index) {
+          if (index == _accounts.length) {
+            // 마지막 인덱스에 "새 계좌 추가" 타일 배치
+            return AddAccountCard(
+              onRefreshAccounts: _onAccountUpdated, // 계좌 목록 갱신 콜백 전달
+            );
+          }
 
-                // 기존 계좌 카드 표시
-                final account = _accounts[index];
-                return FutureBuilder<Map<String, double>>(
-                  future: _dbHelper.getAccountSummary(
-                    account.id!,
-                  ), // 계좌 ID로 요약 정보 요청
-                  builder: (context, snapshot) {
-                    double totalPurchase = 0.0;
-                    double totalCurrent = 0.0;
-                    double totalProfitRate = 0.0;
+          // 기존 계좌 카드 표시
+          final account = _accounts[index];
+          return FutureBuilder<Map<String, double>>(
+            future: _dbHelper.getAccountSummary(account.id!), // 계좌 ID로 요약 정보 요청
+            builder: (context, snapshot) {
+              double totalPurchase = 0.0;
+              double totalCurrent = 0.0;
+              double totalProfitRate = 0.0;
 
-                    // 데이터 로드 완료 및 유효한 데이터가 있을 경우
-                    if (snapshot.connectionState == ConnectionState.done &&
-                        snapshot.hasData) {
-                      totalPurchase = snapshot.data!['totalPurchasePrice']!;
-                      totalCurrent = snapshot.data!['totalCurrentValue']!;
-                      totalProfitRate = snapshot.data!['totalProfitRate']!;
-                    } else if (snapshot.hasError) {
-                      // 에러 발생 시 디버그 출력
-                      debugPrint(
-                        'Error loading account summary for ${account.name}: ${snapshot.error}',
-                      );
-                    }
+              // 데이터 로드 완료 및 유효한 데이터가 있을 경우
+              if (snapshot.connectionState == ConnectionState.done &&
+                  snapshot.hasData) {
+                totalPurchase = snapshot.data!['totalPurchasePrice']!;
+                totalCurrent = snapshot.data!['totalCurrentValue']!;
+                totalProfitRate = snapshot.data!['totalProfitRate']!;
+              } else if (snapshot.hasError) {
+                // 에러 발생 시 디버그 출력
+                debugPrint(
+                  'Error loading account summary for ${account.name}: ${snapshot.error}',
+                );
+              }
 
-                    return Card(
-                      margin: const EdgeInsets.all(
-                        0,
-                      ), // GridView에서 이미 패딩을 주므로 카드 자체 마진은 0
-                      elevation: 4,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: InkWell(
-                        onTap: () async {
-                          // 계좌를 탭하면 해당 계좌의 자산 목록 화면으로 이동 (AssetListScreen)
-                          final bool isMountedBeforePush =
-                              context.mounted; // push 전 mounted mounted 상태 저장
-                          final result = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => AssetListScreen(
-                                account: account, // 선택된 계좌 정보 전달
-                                onAssetUpdated:
-                                    _onAccountUpdated, // 자산 업데이트 시 계좌 목록도 갱신하도록 콜백 전달
-                              ),
-                            ),
-                          );
-                          if (result == true && isMountedBeforePush) {
-                            _onAccountUpdated(); // AssetListScreen에서 변경사항 발생 시 계좌 목록 갱신
-                          }
-                        },
-                        onLongPress: () {
-                          _showAccountOptions(
-                            context,
-                            account,
-                          ); // 길게 누르면 옵션 메뉴 표시
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                account.name,
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                account.description ?? "",
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.normal,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Divider(color: Colors.grey.shade300), // 구분선
-                              const SizedBox(height: 8),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text(
-                                    '총 매수금액:',
-                                    style: TextStyle(fontSize: 16),
-                                  ),
-                                  Text(
-                                    '${totalPurchase.toStringAsFixed(0)} 원',
-                                    style: const TextStyle(fontSize: 16),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text(
-                                    '총 평가금액:',
-                                    style: TextStyle(fontSize: 16),
-                                  ),
-                                  Text(
-                                    '${totalCurrent.toStringAsFixed(0)} 원',
-                                    style: const TextStyle(fontSize: 16),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text(
-                                    '총 수익률:',
-                                    style: TextStyle(fontSize: 18),
-                                  ),
-                                  Text(
-                                    '${totalProfitRate.toStringAsFixed(2)}%',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: totalProfitRate >= 0
-                                          ? Colors.green
-                                          : Colors.red,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
+              return Card(
+                margin: const EdgeInsets.all(
+                  0,
+                ), // GridView에서 이미 패딩을 주므로 카드 자체 마진은 0
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: InkWell(
+                  onTap: () async {
+                    // 계좌를 탭하면 해당 계좌의 자산 목록 화면으로 이동 (AssetListScreen)
+                    final bool isMountedBeforePush =
+                        context.mounted; // push 전 mounted mounted 상태 저장
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AssetListScreen(
+                          account: account, // 선택된 계좌 정보 전달
+                          onAssetUpdated:
+                              _onAccountUpdated, // 자산 업데이트 시 계좌 목록도 갱신하도록 콜백 전달
                         ),
                       ),
                     );
+                    if (result == true && isMountedBeforePush) {
+                      _onAccountUpdated(); // AssetListScreen에서 변경사항 발생 시 계좌 목록 갱신
+                    }
                   },
-                );
-              },
-            ),
+                  onLongPress: () {
+                    _showAccountOptions(context, account); // 길게 누르면 옵션 메뉴 표시
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          account.name,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          account.description ?? "",
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.normal,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Divider(color: Colors.grey.shade300), // 구분선
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              '총 매수금액:',
+                              style: TextStyle(fontSize: 16),
+                            ),
+                            Text(
+                              '${totalPurchase.toStringAsFixed(0)} 원',
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              '총 평가금액:',
+                              style: TextStyle(fontSize: 16),
+                            ),
+                            Text(
+                              '${totalCurrent.toStringAsFixed(0)} 원',
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              '총 수익률:',
+                              style: TextStyle(fontSize: 18),
+                            ),
+                            Text(
+                              '${totalProfitRate.toStringAsFixed(2)}%',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: totalProfitRate >= 0
+                                    ? Colors.green
+                                    : Colors.red,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }

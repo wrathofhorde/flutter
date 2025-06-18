@@ -25,10 +25,10 @@ class AssetSnapshot {
       'id': id,
       'asset_id': assetId,
       'snapshot_date': snapshotDate,
-      'purchasePrice': purchasePrice,
-      'currentValue': currentValue,
-      'profitRate': profitRate,
-      'profitRateChange': profitRateChange,
+      'purchase_price': purchasePrice,
+      'current_value': currentValue,
+      'profit_rate': profitRate,
+      'profitRate_change': profitRateChange,
     };
   }
 
@@ -38,15 +38,18 @@ class AssetSnapshot {
       id: map['id'] as int?,
       assetId: map['asset_id'] as int,
       snapshotDate: map['snapshot_date'] as String,
-      purchasePrice: (map['purchasePrice'] as num).toInt(),
-      currentValue: (map['currentValue'] as num).toInt(),
-      profitRate: (map['profitRate'] as num).toDouble(),
-      profitRateChange: (map['profitRateChange'] as num).toDouble(),
+      purchasePrice: (map['purchase_price'] as num).toInt(),
+      currentValue: (map['current_value'] as num).toInt(),
+      profitRate: (map['profit_rate'] as num).toDouble(),
+      profitRateChange: (map['profit_rate_change'] as num).toDouble(),
     );
   }
 
   @override
   String toString() {
-    return 'AssetSnapshot(id: $id, assetId: $assetId, snapshotDate: $snapshotDate, purchasePrice: $purchasePrice, currentValue: $currentValue, profitRate: $profitRate, profitRateChange: $profitRateChange)';
+    return 'AssetSnapshot(id: $id, asset_id: $assetId, '
+        'snapshot_date: $snapshotDate, purchase_price: $purchasePrice, '
+        'current_value: $currentValue, profit_rate: $profitRate, '
+        'profit_rate_change: $profitRateChange)';
   }
 }
