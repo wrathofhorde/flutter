@@ -1,12 +1,13 @@
 // lib/models/asset_snapshot.dart
+
 class AssetSnapshot {
-  int? id;
-  int assetId; // 어떤 Asset(종목)의 스냅샷인지 참조
-  String snapshotDate; // YYYY-MM-DD 형식의 날짜 문자열
-  int purchasePrice; // 해당 날짜 기준 매수금액 (정수)
-  int currentValue; // 해당 날짜 기준 평가금액 (정수)
-  double profitRate; // 해당 날짜 기준 수익률 (실수)
-  double? profitRateChange; // 해당 날짜 기준 수익률 변화율 (실수, Nullable)
+  int? id; // 스냅샷 고유 ID (SQLite PK)
+  int assetId; // 연결된 자산의 ID
+  String snapshotDate; // 스냅샷 날짜 (YYYY-MM-DD 형식)
+  int purchasePrice; // 해당 날짜의 매수 금액
+  int currentValue; // 해당 날짜의 평가 금액
+  double profitRate; // 해당 날짜의 수익률
+  double profitRateChange; // 이전 스냅샷 대비 수익률 변화율
 
   AssetSnapshot({
     this.id,
@@ -15,39 +16,37 @@ class AssetSnapshot {
     required this.purchasePrice,
     required this.currentValue,
     required this.profitRate,
-    this.profitRateChange,
+    required this.profitRateChange,
   });
 
-  // Map<String, dynamic>으로 변환하여 데이터베이스에 저장할 때 사용
+  // Map으로 변환
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'asset_id': assetId, // 컬럼명 일치
+      'asset_id': assetId,
       'snapshot_date': snapshotDate,
-      'purchase_price': purchasePrice,
-      'current_value': currentValue,
-      'profit_rate': profitRate,
-      'profit_rate_change': profitRateChange,
+      'purchasePrice': purchasePrice,
+      'currentValue': currentValue,
+      'profitRate': profitRate,
+      'profitRateChange': profitRateChange,
     };
   }
 
-  // Map<String, dynamic>에서 AssetSnapshot 객체로 변환하여 데이터베이스에서 읽어올 때 사용
+  // Map에서 AssetSnapshot 객체 생성
   factory AssetSnapshot.fromMap(Map<String, dynamic> map) {
     return AssetSnapshot(
       id: map['id'] as int?,
-      assetId: map['asset_id'] as int, // 컬럼명 일치
+      assetId: map['asset_id'] as int,
       snapshotDate: map['snapshot_date'] as String,
-      purchasePrice: map['purchase_price'] as int,
-      currentValue: map['current_value'] as int,
-      profitRate: map['profit_rate'] as double,
-      profitRateChange: map['profit_rate_change'] as double?,
+      purchasePrice: (map['purchasePrice'] as num).toInt(),
+      currentValue: (map['currentValue'] as num).toInt(),
+      profitRate: (map['profitRate'] as num).toDouble(),
+      profitRateChange: (map['profitRateChange'] as num).toDouble(),
     );
   }
 
   @override
   String toString() {
-    return 'AssetSnapshot(id: $id, assetId: $assetId, date: $snapshotDate, '
-        'purchase: $purchasePrice, current: $currentValue, '
-        'profitRate: $profitRate%, profitRateChange: $profitRateChange%)';
+    return 'AssetSnapshot(id: $id, assetId: $assetId, snapshotDate: $snapshotDate, purchasePrice: $purchasePrice, currentValue: $currentValue, profitRate: $profitRate, profitRateChange: $profitRateChange)';
   }
 }

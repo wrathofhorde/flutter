@@ -28,12 +28,14 @@ class _AssetCalculatorScreenState extends State<AssetCalculatorScreen> {
   double _profitRateChange = 0.0;
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
-  DateTime _selectedDate = DateTime.now(); // !!! 날짜 선택을 위한 변수 추가 !!!
+  DateTime _selectedDate = DateTime.now(); // 날짜 선택을 위한 변수 추가
 
   @override
   void initState() {
     super.initState();
-    // 기존 값이 있다면 컨트롤러에 설정 (int -> String)
+    // AssetCalculatorScreen이 스냅샷 수정 모드로 호출될 경우 해당 스냅샷의 값을 로드합니다.
+    // 이는 AssetSnapshotListScreen에서 특정 스냅샷의 `purchasePrice`와 `currentValue`를
+    // 임시로 Asset 객체에 할당하여 전달했기 때문입니다.
     if (widget.asset.purchasePrice != null) {
       _purchasePriceController.text = widget.asset.purchasePrice!.toString();
     }
@@ -52,7 +54,7 @@ class _AssetCalculatorScreenState extends State<AssetCalculatorScreen> {
     super.dispose();
   }
 
-  // !!! 날짜 선택 다이얼로그 !!!
+  // 날짜 선택 다이얼로그
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -64,9 +66,30 @@ class _AssetCalculatorScreenState extends State<AssetCalculatorScreen> {
       setState(() {
         _selectedDate = picked;
       });
-      // 날짜가 변경되면 수익률 변화율을 다시 계산
-      _updateProfitRateChangeDisplay();
+      // 날짜가 변경되면 해당 날짜의 스냅샷이 있는지 확인하고 로드
+      _loadSnapshotForSelectedDate(_selectedDate);
     }
+  }
+
+  // 선택된 날짜에 해당하는 스냅샷을 로드하여 입력 필드에 채움
+  Future<void> _loadSnapshotForSelectedDate(DateTime date) async {
+    final String targetDate = DateFormat('yyyy-MM-dd').format(date);
+    final AssetSnapshot? existingSnapshot = await _dbHelper
+        .getAssetSnapshotByDate(widget.asset.id!, targetDate);
+
+    setState(() {
+      if (existingSnapshot != null) {
+        _purchasePriceController.text = existingSnapshot.purchasePrice
+            .toString();
+        _currentValueController.text = existingSnapshot.currentValue.toString();
+      } else {
+        // 해당 날짜에 스냅샷이 없으면 필드 초기화
+        _purchasePriceController.clear();
+        _currentValueController.clear();
+      }
+      // 날짜가 변경되었으므로 변화율 다시 계산 (필드 값에 따라)
+      _updateProfitRateChangeDisplay();
+    });
   }
 
   Future<void> _saveAssetData() async {
@@ -123,25 +146,13 @@ class _AssetCalculatorScreenState extends State<AssetCalculatorScreen> {
       final List<AssetSnapshot> relevantSnapshots =
           allSnapshots
               .where(
-                (s) =>
-                    DateTime.parse(s.snapshotDate).isBefore(_selectedDate) ||
-                    DateTime.parse(
-                      s.snapshotDate,
-                    ).isAtSameMomentAs(_selectedDate),
-              ) // 현재 날짜 포함 (자체 업데이트 시)
+                (s) => DateTime.parse(s.snapshotDate).isBefore(_selectedDate),
+              )
               .toList()
             ..sort((a, b) => a.snapshotDate.compareTo(b.snapshotDate));
 
       if (relevantSnapshots.isNotEmpty) {
-        // 선택된 날짜와 정확히 일치하는 스냅샷이 있다면, 그 스냅샷은 현재 업데이트 대상이므로
-        // 그 직전 스냅샷을 previousSnapshot으로 사용합니다.
-        // 아니면 가장 마지막 스냅샷을 사용합니다.
-        if (relevantSnapshots.last.snapshotDate == snapshotDate &&
-            relevantSnapshots.length > 1) {
-          previousSnapshot = relevantSnapshots[relevantSnapshots.length - 2];
-        } else if (relevantSnapshots.last.snapshotDate != snapshotDate) {
-          previousSnapshot = relevantSnapshots.last;
-        }
+        previousSnapshot = relevantSnapshots.last;
       }
 
       final double profitRateChangeForSnapshot = (previousSnapshot != null)
@@ -243,7 +254,7 @@ class _AssetCalculatorScreenState extends State<AssetCalculatorScreen> {
                   ),
                 ),
               const SizedBox(height: 24.0),
-              // !!! 날짜 선택 필드 추가 !!!
+              // 날짜 선택 필드
               GestureDetector(
                 onTap: () => _selectDate(context),
                 child: AbsorbPointer(
@@ -321,7 +332,7 @@ class _AssetCalculatorScreenState extends State<AssetCalculatorScreen> {
               _buildResultCard(
                 title: '수익률 변화율',
                 value: '${_profitRateChange.toStringAsFixed(2)}%',
-                color: _profitRateChange >= 0 ? Colors.green : Colors.red,
+                color: _profitRateChange >= 0 ? Colors.blue : Colors.deepOrange,
               ),
               const SizedBox(height: 32.0),
               ElevatedButton(
@@ -332,7 +343,7 @@ class _AssetCalculatorScreenState extends State<AssetCalculatorScreen> {
                 child: const Text(
                   '스냅샷 추가/업데이트',
                   style: TextStyle(fontSize: 18),
-                ), // !!! 버튼 텍스트 변경 !!!
+                ),
               ),
             ],
           ),
