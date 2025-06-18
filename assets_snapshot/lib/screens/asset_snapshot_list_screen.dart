@@ -67,9 +67,19 @@ class _AssetSnapshotListScreenState extends State<AssetSnapshotListScreen> {
       ),
     );
 
-    // AssetCalculatorScreen에서 true를 반환하면 (저장 성공 시) 스냅샷 목록 새로고침
+    // AssetCalculatorScreen에서 true를 반환했다면 (저장 성공 시), 스냅샷 목록 새로고침
+    // 그리고 이 화면을 호출한 상위 위젯에게도 변경사항이 있음을 알리기 위해 true를 반환
     if (result == true) {
-      _loadSnapshots();
+      await _loadSnapshots(); // 스냅샷 목록을 갱신 (비동기 완료 기다림)
+      // !!! 여기가 가장 중요: 이 화면을 닫으면서 `true`를 반환하여 `AssetCard`에 변경을 알림 !!!
+      // 만약 Navigator.canPop(context)가 false인 경우 (예: 스택에 이전에 pop할 화면이 없는 경우)
+      // pop을 호출하면 오류가 발생할 수 있으므로 확인하는 것이 안전하지만,
+      // 일반적으로 Navigator.push로 들어온 화면은 pop 가능합니다.
+      if (!mounted) return;
+      if (context.mounted && Navigator.canPop(context)) {
+        // 추가된 확인
+        Navigator.of(context).pop(true);
+      }
     }
   }
 
@@ -105,7 +115,15 @@ class _AssetSnapshotListScreenState extends State<AssetSnapshotListScreen> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('스냅샷이 삭제되었습니다.')));
-        _loadSnapshots(); // 삭제 후 목록 새로 고침
+
+        await _loadSnapshots(); // 삭제 후 목록 새로 고침
+
+        if (!mounted) return;
+
+        if (context.mounted && Navigator.canPop(context)) {
+          // 추가된 확인
+          Navigator.of(context).pop(true);
+        }
       } catch (e) {
         debugPrint('Failed to delete snapshot: $e');
         if (!mounted) return;

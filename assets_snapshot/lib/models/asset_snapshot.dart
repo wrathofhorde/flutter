@@ -28,7 +28,7 @@ class AssetSnapshot {
       'purchase_price': purchasePrice,
       'current_value': currentValue,
       'profit_rate': profitRate,
-      'profitRate_change': profitRateChange,
+      'profit_rate_change': profitRateChange,
     };
   }
 

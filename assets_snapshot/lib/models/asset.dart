@@ -43,8 +43,12 @@ class Asset {
       'purchase_price': purchasePrice,
       'current_value': currentValue,
       'last_profit_rate': lastProfitRate,
-      'created_at': createdAt?.toIso8601String(), // 이 부분 추가
-      'updated_at': updatedAt?.toIso8601String(), // 이 부분 추가
+      'created_at': createdAt != null
+          ? createdAt!.toIso8601String()
+          : DateTime.now().toIso8601String(), // null이면 현재 시간으로 설정
+      'updated_at': updatedAt != null
+          ? updatedAt!.toIso8601String()
+          : DateTime.now().toIso8601String(), // null이면 현재 시간으로 설정
     };
   }
 

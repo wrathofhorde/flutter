@@ -162,8 +162,8 @@ class DatabaseHelper {
     final List<Map<String, dynamic>> result = await db.rawQuery(
       '''
       SELECT
-        SUM(purchasePrice) as totalPurchasePrice,
-        SUM(currentValue) as totalCurrentValue
+        SUM(purchase_price) as totalPurchasePrice,
+        SUM(current_value) as totalCurrentValue
       FROM assets
       WHERE account_id = ?
     ''',
