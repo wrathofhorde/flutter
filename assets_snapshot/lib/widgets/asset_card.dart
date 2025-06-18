@@ -2,7 +2,7 @@
 import 'package:assets_snapshot/database/database_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:assets_snapshot/models/asset.dart';
-import 'package:assets_snapshot/screens/asset_calculator_screen.dart';
+import 'package:assets_snapshot/screens/asset_snapshot_list_screen.dart'; // 스냅샷 리스트 화면으로 변경
 import 'package:assets_snapshot/screens/add_asset_screen.dart';
 
 class AssetCard extends StatelessWidget {
@@ -25,16 +25,14 @@ class AssetCard extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: () async {
-          // AssetCalculatorScreen으로 이동하여 상세 계산 및 스냅샷 저장
+          // AssetSnapshotListScreen으로 이동
           final result = await Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => AssetCalculatorScreen(
-                asset: asset,
-                onAssetUpdated: onAssetUpdated,
-              ),
+              builder: (context) => AssetSnapshotListScreen(asset: asset),
             ),
           );
+          // 스냅샷 리스트 화면에서 변경사항이 있을 수 있으므로 자산 목록 업데이트 (선택사항)
           if (result == true && context.mounted) {
             onAssetUpdated();
           }
@@ -63,7 +61,7 @@ class AssetCard extends StatelessWidget {
                   const SizedBox(height: 4), // 종목명과 부가 정보 사이의 간격
                   // 자산 유형과 투자 지역 (다음 줄)
                   Text(
-                    '${asset.assetTypeInKorean} | ${asset.assetLocationInKorean}', // Asset 클래스의 getter 사용
+                    '${asset.assetTypeInKorean} | ${asset.assetLocationInKorean}',
                     style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                   ),
                   const SizedBox(height: 8),
@@ -141,8 +139,6 @@ class AssetCard extends StatelessWidget {
                     onAssetUpdated(); // 수정 후 목록 업데이트
                   }
                 },
-                // padding: EdgeInsets.zero, // IconButton의 기본 패딩 제거
-                // constraints: const BoxConstraints(), // IconButton의 최소 크기 제한 제거
               ),
             ),
             // 우상단 삭제 아이콘
@@ -154,8 +150,6 @@ class AssetCard extends StatelessWidget {
                 onPressed: () {
                   _confirmDelete(context);
                 },
-                // padding: EdgeInsets.zero, // IconButton의 기본 패딩 제거
-                // constraints: const BoxConstraints(), // IconButton의 최소 크기 제한 제거
               ),
             ),
           ],
