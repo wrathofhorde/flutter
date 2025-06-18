@@ -14,6 +14,8 @@ class Asset {
   int? purchasePrice;
   int? currentValue;
   double? lastProfitRate;
+  DateTime? createdAt; // DateTime 타입으로 변경, nullable 허용
+  DateTime? updatedAt; // DateTime 타입으로 변경, nullable 허용
 
   Asset({
     this.id,
@@ -25,6 +27,8 @@ class Asset {
     this.purchasePrice,
     this.currentValue,
     this.lastProfitRate,
+    this.createdAt, // 생성자에도 추가
+    this.updatedAt, // 생성자에도 추가
   });
 
   // Map으로 변환
@@ -36,9 +40,11 @@ class Asset {
       'asset_type': assetType.toString().split('.').last,
       'asset_location': assetLocation.toString().split('.').last, // 새 컬럼
       'memo': memo,
-      'purchasePrice': purchasePrice,
-      'currentValue': currentValue,
-      'lastProfitRate': lastProfitRate,
+      'purchase_price': purchasePrice,
+      'current_value': currentValue,
+      'last_profit_rate': lastProfitRate,
+      'created_at': createdAt?.toIso8601String(), // 이 부분 추가
+      'updated_at': updatedAt?.toIso8601String(), // 이 부분 추가
     };
   }
 
@@ -57,15 +63,22 @@ class Asset {
         orElse: () => AssetLocation.domestic, // 기본값 처리
       ),
       memo: map['memo'] as String?,
-      purchasePrice: map['purchasePrice'] != null
-          ? (map['purchasePrice'] as num).toInt()
+      purchasePrice: map['purchase_price'] != null
+          ? (map['purchase_price'] as num).toInt()
           : null,
-      currentValue: map['currentValue'] != null
-          ? (map['currentValue'] as num).toInt()
+      currentValue: map['current_value'] != null
+          ? (map['current_value'] as num).toInt()
           : null,
-      lastProfitRate: map['lastProfitRate'] != null
-          ? (map['lastProfitRate'] as num).toDouble()
+      lastProfitRate: map['last_profit_rate'] != null
+          ? (map['last_profit_rate'] as num).toDouble()
           : null,
+      // String을 DateTime 객체로 변환
+      createdAt: map['created_at'] != null
+          ? DateTime.parse(map['created_at'] as String)
+          : null, // 이 부분 추가
+      updatedAt: map['updated_at'] != null
+          ? DateTime.parse(map['updated_at'] as String)
+          : null, // 이 부분 추가
     );
   }
 
@@ -110,7 +123,8 @@ class Asset {
         'accountId: $accountId, name: $name, '
         'assetType: $assetType, assetLocation: $assetLocation, '
         'memo: $memo, purchasePrice: $purchasePrice, '
-        'currentValue: $currentValue, lastProfitRate: $lastProfitRate)';
+        'currentValue: $currentValue, lastProfitRate: $lastProfitRate '
+        'createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   // 데이터 업데이트를 위한 copyWith 메서드
@@ -124,6 +138,8 @@ class Asset {
     int? purchasePrice,
     int? currentValue,
     double? lastProfitRate,
+    DateTime? createdAt, // copyWith에도 추가
+    DateTime? updatedAt, // copyWith에도 추가
   }) {
     return Asset(
       id: id ?? this.id,
@@ -135,6 +151,8 @@ class Asset {
       purchasePrice: purchasePrice ?? this.purchasePrice,
       currentValue: currentValue ?? this.currentValue,
       lastProfitRate: lastProfitRate ?? this.lastProfitRate,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }

@@ -1,4 +1,6 @@
 // lib/database/database_helper.dart
+import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:assets_snapshot/models/account.dart';
@@ -24,83 +26,98 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDatabase() async {
-    String path = join(await getDatabasesPath(), 'assets_snapshot.db');
+    final documentsDirectory = await getApplicationDocumentsDirectory();
+    String path = join(documentsDirectory.path, 'assets_snapshot.db');
+
+    debugPrint('Database path (using getApplicationDocumentsDirectory): $path');
+    debugPrint(path);
     return await openDatabase(
       path,
-      version: 2, // 데이터베이스 버전 변경 (asset_location, asset_snapshots 테이블 추가)
+      version: 3, // 데이터베이스 버전 변경 (asset_location, asset_snapshots 테이블 추가)
       onCreate: _onCreate,
       onUpgrade: _onUpgrade, // onUpgrade 콜백 추가
     );
   }
 
   Future<void> _onCreate(Database db, int version) async {
-    // accounts 테이블 생성
     await db.execute('''
       CREATE TABLE accounts(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL UNIQUE
+        name TEXT NOT NULL UNIQUE,
+        description TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
       )
     ''');
 
-    // assets 테이블 생성
-    // asset_location 컬럼 추가
     await db.execute('''
       CREATE TABLE assets(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        account_id INTEGER NOT NULL,
+        account_id INTEGER NOT NULL,      -- 스네이크 케이스
         name TEXT NOT NULL,
         asset_type TEXT NOT NULL,
-        asset_location TEXT NOT NULL DEFAULT 'domestic', -- 기본값 설정
+        asset_location TEXT NOT NULL,
         memo TEXT,
-        purchasePrice INTEGER,
-        currentValue INTEGER,
-        lastProfitRate REAL,
-        FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
+        purchase_price INTEGER,           -- 스네이크 케이스
+        current_value INTEGER,            -- 스네이크 케이스
+        last_profit_rate REAL,            -- 스네이크 케이스
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (account_id) REFERENCES accounts (id) ON DELETE CASCADE
       )
     ''');
 
-    // asset_snapshots 테이블 생성 (새로 추가)
     await db.execute('''
       CREATE TABLE asset_snapshots(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        asset_id INTEGER NOT NULL,
-        snapshot_date TEXT NOT NULL, -- YYYY-MM-DD 형식
-        purchasePrice INTEGER NOT NULL,
-        currentValue INTEGER NOT NULL,
-        profitRate REAL NOT NULL,
-        profitRateChange REAL NOT NULL,
-        UNIQUE(asset_id, snapshot_date), -- 동일 종목의 같은 날짜 스냅샷 중복 방지
-        FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE
+        asset_id INTEGER NOT NULL,        -- 스네이크 케이스
+        snapshot_date TEXT NOT NULL,      -- 스네이크 케이스
+        purchase_price INTEGER,           -- 스네이크 케이스
+        current_value INTEGER NOT NULL,   -- 스네이크 케이스 (AssetSnapshot 모델에 맞춰 not null 적용)
+        profit_rate REAL NOT NULL,        -- 스네이크 케이스
+        profit_rate_change REAL NOT NULL, -- 스네이크 케이스
+        FOREIGN KEY (asset_id) REFERENCES assets (id) ON DELETE CASCADE
       )
     ''');
+    // asset_locations 테이블은 주석 처리 유지
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
-      // Version 1 -> Version 2 업그레이드
-      // assets 테이블에 asset_location 컬럼 추가 (이미 있다면 무시)
-      try {
-        await db.execute(
-          "ALTER TABLE assets ADD COLUMN asset_location TEXT NOT NULL DEFAULT 'domestic'",
-        );
-      } catch (e) {
-        print("asset_location column already exists or other error: $e");
-      }
-
-      // asset_snapshots 테이블 생성
+      await db.execute(
+        "ALTER TABLE assets ADD COLUMN asset_location TEXT NOT NULL DEFAULT 'domestic'",
+      );
+      // asset_snapshots 테이블이 없었다면 생성 (이전 스키마)
       await db.execute('''
-        CREATE TABLE asset_snapshots(
+        CREATE TABLE IF NOT EXISTS asset_snapshots(
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           asset_id INTEGER NOT NULL,
-          snapshot_date TEXT NOT NULL, -- YYYY-MM-DD 형식
-          purchasePrice INTEGER NOT NULL,
-          currentValue INTEGER NOT NULL,
-          profitRate REAL NOT NULL,
-          profitRateChange REAL NOT NULL,
-          UNIQUE(asset_id, snapshot_date), -- 동일 종목의 같은 날짜 스냅샷 중복 방지
-          FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE
+          snapshot_date TEXT NOT NULL,
+          current_value REAL NOT NULL, -- 이전 버전에서는 purchase_price가 없었음
+          FOREIGN KEY (asset_id) REFERENCES assets (id) ON DELETE CASCADE
         )
       ''');
+      debugPrint(
+        'Upgraded to version 2: asset_location added, asset_snapshots created.',
+      );
+    }
+
+    if (oldVersion < 3) {
+      // asset_snapshots 테이블에 purchase_price 컬럼 추가
+      await db.execute(
+        "ALTER TABLE asset_snapshots ADD COLUMN purchase_price INTEGER",
+      );
+      // currentValue, profitRate, profitRateChange도 스네이크 케이스로 변경하려면
+      // SQLite는 ALTER TABLE RENAME COLUMN을 지원합니다.
+      // 하지만 이미 데이터가 있다면 복잡해질 수 있습니다.
+      // ALTER TABLE asset_snapshots RENAME COLUMN currentValue TO current_value;
+      // ALTER TABLE asset_snapshots RENAME COLUMN profitRate TO profit_rate;
+      // ALTER TABLE asset_snapshots RENAME COLUMN profitRateChange TO profit_rate_change;
+      // 복잡하므로 이 부분은 모델의 toMap/fromMap에서 처리하는 것이 더 일반적입니다.
+      // DB 스키마는 최초 생성 시 맞춰놓고, 이후 마이그레이션은 컬럼 추가/삭제 위주로 합니다.
+      debugPrint(
+        'Upgraded to version 3: purchase_price added to asset_snapshots.',
+      );
     }
   }
 
@@ -174,6 +191,9 @@ class DatabaseHelper {
   // --- Asset CRUD Operations ---
   Future<int> insertAsset(Asset asset) async {
     final db = await database;
+    final now = DateTime.now();
+    asset.createdAt = asset.createdAt ?? now;
+    asset.updatedAt = now; // 항상 현재 시간으로 업데이트
     return await db.insert(
       'assets',
       asset.toMap(),
@@ -209,11 +229,13 @@ class DatabaseHelper {
 
   Future<int> updateAsset(Asset asset) async {
     final db = await database;
+    asset.updatedAt = DateTime.now(); // 업데이트 시 updated_at 갱신
     return await db.update(
       'assets',
       asset.toMap(),
       where: 'id = ?',
       whereArgs: [asset.id],
+      conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
 

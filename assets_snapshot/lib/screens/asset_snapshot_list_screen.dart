@@ -180,9 +180,9 @@ class _AssetSnapshotListScreenState extends State<AssetSnapshotListScreen> {
                                 ),
                               ),
                               Text(
-                                '변화율: ${snapshot.profitRateChange?.toStringAsFixed(2)}%',
+                                '변화율: ${snapshot.profitRateChange.toStringAsFixed(2)}%',
                                 style: TextStyle(
-                                  color: snapshot.profitRateChange! >= 0
+                                  color: snapshot.profitRateChange >= 0
                                       ? Colors.blue
                                       : Colors.deepOrange,
                                 ),
