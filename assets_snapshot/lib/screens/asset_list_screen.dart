@@ -7,7 +7,6 @@ import 'package:assets_snapshot/models/asset.dart';
 // 분리한 위젯 임포트
 import 'package:assets_snapshot/widgets/asset_card.dart';
 import 'package:assets_snapshot/widgets/add_asset_card.dart'; // AddAssetCard 임포트
-import 'package:assets_snapshot/screens/add_asset_screen.dart'; // AddAssetScreen 임포트
 
 class AssetListScreen extends StatefulWidget {
   final Account account; // 현재 보고 있는 계좌 정보
