@@ -114,8 +114,7 @@ class _MyAppState extends State<MyApp> {
           labelStyle: TextStyle(color: Colors.grey[700]), // 라벨 텍스트 색상
           hintStyle: TextStyle(color: Colors.grey[400]), // 힌트 텍스트 색상
           filled: true,
-          fillColor:
-              Colors.grey.shade100, // 입력 필드 배경색을 아주 연한 회색으로 (기존 white에서 변경)
+          fillColor: Colors.grey.shade100,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8.0),
             borderSide: BorderSide(color: Colors.grey[300]!, width: 1.0),

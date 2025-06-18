@@ -1,7 +1,5 @@
 // lib/models/asset.dart
 
-import 'package:assets_snapshot/models/account.dart'; // Account 모델 임포트 (필요하다면)
-
 enum AssetType { stock, crypto, deposit, bond, fund, etf, wrap, other }
 
 enum AssetLocation { domestic, overseas }

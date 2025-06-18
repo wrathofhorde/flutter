@@ -16,7 +16,7 @@ class DatabaseHelper {
   static Database? _database;
   static Completer<Database>?
   _databaseCompleter; // 추가: 데이터베이스 초기화 완료를 위한 Completer
-  static const int _databaseVersion = 5;
+  static const int _databaseVersion = 5; // 현재 데이터베이스 버전
 
   Future<Database> get database async {
     if (_database != null) {
@@ -42,7 +42,7 @@ class DatabaseHelper {
   Future<Database> _initDatabase() async {
     var documentsDirectory = await getApplicationDocumentsDirectory();
     String path = join(documentsDirectory.path, 'investment_tracker.db');
-    debugPrint('DB 저장경로:$path'); // !!! 여기가 한 번만 출력되도록 보장 !!!
+    debugPrint('DB 저장경로:$path'); // 데이터베이스 저장 경로 출력
 
     return await openDatabase(
       path,
@@ -71,12 +71,12 @@ class DatabaseHelper {
         account_id INTEGER NOT NULL,
         name TEXT NOT NULL,
         asset_type TEXT NOT NULL,
-        asset_location TEXT NOT NULL DEFAULT 'domestic',
+        asset_location TEXT NOT NULL DEFAULT 'domestic', -- '국내/해외' 구분을 위한 필드 (DB에 'domestic'/'overseas' 저장)
         memo TEXT,
-        purchasePrice INTEGER,
-        currentValue INTEGER,
-        lastProfitRate REAL,
-        UNIQUE(account_id, name),
+        purchasePrice INTEGER,    -- 매수금액 (정수형)
+        currentValue INTEGER,     -- 현재가치 (정수형)
+        lastProfitRate REAL,      -- 최종 수익률 (실수형)
+        UNIQUE(account_id, name), -- 한 계좌에 동일한 이름의 자산은 중복될 수 없음
         FOREIGN KEY (account_id) REFERENCES Accounts(id) ON DELETE CASCADE
       )
     ''');
@@ -101,13 +101,13 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS AssetSnapshots(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        asset_id INTEGER NOT NULL,
+        asset_id INTEGER NOT NULL,  -- 외래 키: 어떤 종목의 스냅샷인지
         snapshot_date TEXT NOT NULL,
-        purchase_price INTEGER NOT NULL,
-        current_value INTEGER NOT NULL,
-        profit_rate REAL NOT NULL,
-        profit_rate_change REAL,
-        UNIQUE(asset_id, snapshot_date),
+        purchase_price INTEGER NOT NULL,   -- 해당 스냅샷 시점의 매수금액
+        current_value INTEGER NOT NULL,    -- 해당 스냅샷 시점의 평가금액
+        profit_rate REAL NOT NULL,         -- 해당 스냅샷 시점의 수익률
+        profit_rate_change REAL,           -- 해당 스냅샷 시점의 수익률 변화율
+        UNIQUE(asset_id, snapshot_date),   -- 특정 종목의 특정 날짜 스냅샷은 유일해야 함
         FOREIGN KEY (asset_id) REFERENCES Assets(id) ON DELETE CASCADE
       )
     ''');
@@ -118,12 +118,17 @@ class DatabaseHelper {
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     debugPrint("Database upgraded from version $oldVersion to $newVersion");
 
+    // 버전 5로 업그레이드: Assets 테이블에 asset_location 컬럼 추가
     if (oldVersion < 5) {
+      // ALTER TABLE로 컬럼 추가 (기존 데이터 유지)
+      // SQLite는 ADD COLUMN 시 NOT NULL을 허용하지만 DEFAULT 값을 지정해야 함
       await db.execute(
         'ALTER TABLE Assets ADD COLUMN asset_location TEXT NOT NULL DEFAULT \'domestic\'',
       );
       debugPrint('Assets table upgraded: asset_location column added.');
     }
+    // 다른 버전 업그레이드 로직은 여기에 추가될 수 있습니다.
+    // 예를 들어, oldVersion < 4인 경우 AssetSnapshots 테이블 스키마 변경 로직 등
   }
 
   Future<void> close() async {
@@ -390,4 +395,39 @@ class DatabaseHelper {
     );
     return rowsDeleted;
   }
+
+  // --- 계좌별 총 자산 현황 조회 메서드 추가 ---
+  Future<Map<String, double>> getAccountSummary(int accountId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> result = await db.rawQuery(
+      '''
+      SELECT
+        SUM(purchasePrice) AS totalPurchasePrice,
+        SUM(currentValue) AS totalCurrentValue
+      FROM Assets
+      WHERE account_id = ? -- 여기 컬럼명은 데이터베이스 스키마와 일치해야 합니다. (account_id)
+    ''',
+      [accountId],
+    );
+
+    // SUM 함수는 결과가 없을 경우 null을 반환할 수 있으므로, null 처리 필수
+    double totalPurchasePrice =
+        (result.first['totalPurchasePrice'] as num?)?.toDouble() ?? 0.0;
+    double totalCurrentValue =
+        (result.first['totalCurrentValue'] as num?)?.toDouble() ?? 0.0;
+
+    double totalProfitRate = 0.0;
+    if (totalPurchasePrice != 0) {
+      totalProfitRate =
+          ((totalCurrentValue - totalPurchasePrice) / totalPurchasePrice) * 100;
+    }
+
+    return {
+      'totalPurchasePrice': totalPurchasePrice,
+      'totalCurrentValue': totalCurrentValue,
+      'totalProfitRate': totalProfitRate,
+    };
+  }
+
+  // ---------------------------------------------
 }
