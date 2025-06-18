@@ -55,10 +55,11 @@ class _AddAssetScreenState extends State<AddAssetScreen> {
         assetType: _selectedAssetType!,
         assetLocation: _selectedAssetLocation!,
         memo: _memoController.text.isNotEmpty ? _memoController.text : null,
-        // purchasePrice, currentValue, lastProfitRate는 AssetCalculatorScreen에서 관리되므로 여기서는 null (혹은 기본값)
         purchasePrice: _isEditing ? widget.asset!.purchasePrice : null,
         currentValue: _isEditing ? widget.asset!.currentValue : null,
         lastProfitRate: _isEditing ? widget.asset!.lastProfitRate : null,
+        updatedAt: DateTime.now(),
+        createdAt: _isEditing ? widget.asset!.createdAt : DateTime.now(),
       );
 
       try {
@@ -69,6 +70,7 @@ class _AddAssetScreenState extends State<AddAssetScreen> {
             context,
           ).showSnackBar(const SnackBar(content: Text('종목 정보가 업데이트되었습니다.')));
         } else {
+          // asset.createdAt = DateTime.now();
           await _dbHelper.insertAsset(asset);
           if (!mounted) return;
           ScaffoldMessenger.of(
