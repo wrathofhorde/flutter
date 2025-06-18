@@ -99,6 +99,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                   hintText: '예: 주식 투자 계좌',
                   border: OutlineInputBorder(),
                 ),
+                style: const TextStyle(color: Colors.black),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return '계좌명을 입력해주세요.';
@@ -116,6 +117,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                   alignLabelWithHint: true,
                   border: OutlineInputBorder(),
                 ),
+                style: const TextStyle(color: Colors.black),
               ),
               const SizedBox(height: 32),
               ElevatedButton(

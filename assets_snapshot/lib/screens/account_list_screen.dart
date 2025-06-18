@@ -235,6 +235,14 @@ class _AccountListScreenState extends State<AccountListScreen> {
                                 ),
                               ),
                               const SizedBox(height: 8),
+                              Text(
+                                account.description ?? "",
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.normal,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
                               Divider(color: Colors.grey.shade300), // 구분선
                               const SizedBox(height: 8),
                               Row(
