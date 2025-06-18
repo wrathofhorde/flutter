@@ -17,38 +17,6 @@ class AssetCard extends StatelessWidget {
     required this.onAssetDeleted,
   });
 
-  // AssetType enum 값을 한글 텍스트로 변환 (AddAssetScreen과 동일)
-  String _assetTypeToKorean(AssetType type) {
-    switch (type) {
-      case AssetType.stock:
-        return '주식';
-      case AssetType.crypto:
-        return '가상화폐';
-      case AssetType.deposit:
-        return '예금';
-      case AssetType.bond:
-        return '채권';
-      case AssetType.fund:
-        return '펀드';
-      case AssetType.etf:
-        return 'ETF';
-      case AssetType.wrap:
-        return 'Wrap';
-      case AssetType.other:
-        return '기타';
-    }
-  }
-
-  // AssetLocation enum 값을 한글 텍스트로 변환 (AddAssetScreen과 동일)
-  String _assetLocationToKorean(AssetLocation location) {
-    switch (location) {
-      case AssetLocation.domestic:
-        return '국내';
-      case AssetLocation.overseas:
-        return '해외';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -95,7 +63,7 @@ class AssetCard extends StatelessWidget {
                   const SizedBox(height: 4), // 종목명과 부가 정보 사이의 간격
                   // 자산 유형과 투자 지역 (다음 줄)
                   Text(
-                    '${_assetTypeToKorean(asset.assetType)} | ${_assetLocationToKorean(asset.assetLocation)}',
+                    '${asset.assetTypeInKorean} | ${asset.assetLocationInKorean}', // Asset 클래스의 getter 사용
                     style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                   ),
                   const SizedBox(height: 8),

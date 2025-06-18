@@ -1,6 +1,6 @@
 // lib/models/asset.dart
 
-enum AssetType { stock, crypto, deposit, bond, fund, etf, wrap, other }
+enum AssetType { stock, crypto, deposit, bond, fund, etf, wrap, cash, other }
 
 enum AssetLocation { domestic, overseas }
 
@@ -50,6 +50,7 @@ class Asset {
       name: map['name'] as String,
       assetType: AssetType.values.firstWhere(
         (e) => e.toString().split('.').last == map['asset_type'],
+        orElse: () => AssetType.other, // 찾지 못했을 경우 기본값 (other) 설정
       ),
       assetLocation: AssetLocation.values.firstWhere(
         (e) => e.toString().split('.').last == map['asset_location'],
@@ -68,10 +69,48 @@ class Asset {
     );
   }
 
+  // AssetType enum 값을 한글 텍스트로 변환하는 getter 추가
+  String get assetTypeInKorean {
+    switch (assetType) {
+      case AssetType.stock:
+        return '주식';
+      case AssetType.crypto:
+        return '가상화폐';
+      case AssetType.deposit:
+        return '예금';
+      case AssetType.bond:
+        return '채권';
+      case AssetType.fund:
+        return '펀드';
+      case AssetType.etf:
+        return 'ETF';
+      case AssetType.wrap:
+        return 'Wrap';
+      case AssetType.cash: // 'cash' 추가
+        return '현금';
+      case AssetType.other:
+        return '기타';
+    }
+  }
+
+  // AssetLocation enum 값을 한글 텍스트로 변환하는 getter 추가
+  String get assetLocationInKorean {
+    switch (assetLocation) {
+      case AssetLocation.domestic:
+        return '국내';
+      case AssetLocation.overseas:
+        return '해외';
+    }
+  }
+
   // toString (디버깅 용이)
   @override
   String toString() {
-    return 'Asset(id: $id, accountId: $accountId, name: $name, assetType: $assetType, assetLocation: $assetLocation, memo: $memo, purchasePrice: $purchasePrice, currentValue: $currentValue, lastProfitRate: $lastProfitRate)';
+    return 'Asset(id: $id, '
+        'accountId: $accountId, name: $name, '
+        'assetType: $assetType, assetLocation: $assetLocation, '
+        'memo: $memo, purchasePrice: $purchasePrice, '
+        'currentValue: $currentValue, lastProfitRate: $lastProfitRate)';
   }
 
   // 데이터 업데이트를 위한 copyWith 메서드

@@ -18,7 +18,7 @@ class _AddAssetScreenState extends State<AddAssetScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _memoController = TextEditingController();
   AssetType? _selectedAssetType;
-  AssetLocation? _selectedAssetLocation; // !!! 새 필드 추가 !!!
+  AssetLocation? _selectedAssetLocation;
 
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
@@ -31,11 +31,11 @@ class _AddAssetScreenState extends State<AddAssetScreen> {
       _nameController.text = widget.asset!.name;
       _memoController.text = widget.asset!.memo ?? '';
       _selectedAssetType = widget.asset!.assetType;
-      _selectedAssetLocation = widget.asset!.assetLocation; // !!! 기존 값 로드 !!!
+      _selectedAssetLocation = widget.asset!.assetLocation;
     } else {
       // 새로운 종목 추가 시 기본값 설정 (선택 사항)
       _selectedAssetType = AssetType.stock; // 기본 종목 유형
-      _selectedAssetLocation = AssetLocation.domestic; // !!! 기본 투자 지역 (국내) !!!
+      _selectedAssetLocation = AssetLocation.domestic; // 기본 투자 지역 (국내)
     }
   }
 
@@ -53,7 +53,7 @@ class _AddAssetScreenState extends State<AddAssetScreen> {
         accountId: widget.accountId,
         name: _nameController.text,
         assetType: _selectedAssetType!,
-        assetLocation: _selectedAssetLocation!, // !!! 선택된 지역 저장 !!!
+        assetLocation: _selectedAssetLocation!,
         memo: _memoController.text.isNotEmpty ? _memoController.text : null,
         // purchasePrice, currentValue, lastProfitRate는 AssetCalculatorScreen에서 관리되므로 여기서는 null (혹은 기본값)
         purchasePrice: _isEditing ? widget.asset!.purchasePrice : null,
@@ -83,38 +83,6 @@ class _AddAssetScreenState extends State<AddAssetScreen> {
           context,
         ).showSnackBar(SnackBar(content: Text('종목 저장 실패: $e')));
       }
-    }
-  }
-
-  // AssetType enum 값을 한글 텍스트로 변환
-  String _assetTypeToKorean(AssetType type) {
-    switch (type) {
-      case AssetType.stock:
-        return '주식';
-      case AssetType.crypto:
-        return '가상화폐';
-      case AssetType.deposit:
-        return '예금';
-      case AssetType.bond:
-        return '채권';
-      case AssetType.fund:
-        return '펀드';
-      case AssetType.etf:
-        return 'ETF';
-      case AssetType.wrap:
-        return 'Wrap';
-      case AssetType.other:
-        return '기타';
-    }
-  }
-
-  // AssetLocation enum 값을 한글 텍스트로 변환
-  String _assetLocationToKorean(AssetLocation location) {
-    switch (location) {
-      case AssetLocation.domestic:
-        return '국내';
-      case AssetLocation.overseas:
-        return '해외';
     }
   }
 
@@ -168,7 +136,13 @@ class _AddAssetScreenState extends State<AddAssetScreen> {
                 items: AssetType.values.map((type) {
                   return DropdownMenuItem(
                     value: type,
-                    child: Text(_assetTypeToKorean(type)), // 한글 표시
+                    child: Text(
+                      Asset(
+                        accountId: 0,
+                        name: '',
+                        assetType: type,
+                      ).assetTypeInKorean,
+                    ), // Asset 클래스의 getter 사용
                   );
                 }).toList(),
                 onChanged: (value) {
@@ -204,7 +178,14 @@ class _AddAssetScreenState extends State<AddAssetScreen> {
                 items: AssetLocation.values.map((location) {
                   return DropdownMenuItem(
                     value: location,
-                    child: Text(_assetLocationToKorean(location)), // 한글 표시
+                    child: Text(
+                      Asset(
+                        accountId: 0,
+                        name: '',
+                        assetType: AssetType.other,
+                        assetLocation: location,
+                      ).assetLocationInKorean,
+                    ), // Asset 클래스의 getter 사용
                   );
                 }).toList(),
                 onChanged: (value) {
