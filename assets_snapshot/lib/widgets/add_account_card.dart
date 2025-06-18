@@ -16,15 +16,15 @@ class AddAccountCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12.0),
         side: BorderSide(color: Colors.blue.shade200, width: 1), // 테두리 추가
       ),
-      // --- 이 부분을 수정합니다. ---
+      margin: const EdgeInsets.all(0), // <--- 이 부분을 추가하여 마진을 0으로 설정합니다.
       child: InkWell(
-        // GestureDetector 대신 InkWell 사용
         onTap: () async {
           final result = await Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const AddAccountScreen()),
           );
-          if (result == true) {
+          if (result == true && context.mounted) {
+            // mounted 체크 추가
             onRefreshAccounts(); // 새 계좌 추가 후 계좌 목록 갱신
           }
         },
@@ -49,7 +49,6 @@ class AddAccountCard extends StatelessWidget {
           ),
         ),
       ),
-      // ------------------------
     );
   }
 }

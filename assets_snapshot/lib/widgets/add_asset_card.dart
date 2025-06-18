@@ -15,7 +15,13 @@ class AddAssetCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: Colors.white,
+      color: Colors.white, // 추가 버튼 타일의 배경색
+      elevation: 2.0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12.0),
+        side: BorderSide(color: Colors.blue.shade200, width: 1), // 테두리 추가
+      ),
+      margin: const EdgeInsets.all(0), // <--- 다른 카드와 크기 일치를 위해 마진 0 설정
       child: InkWell(
         onTap: () async {
           final result = await Navigator.push(
@@ -24,11 +30,14 @@ class AddAssetCard extends StatelessWidget {
               builder: (context) => AddAssetScreen(accountId: accountId),
             ),
           );
-          if (result == true) {
+          if (result == true && context.mounted) {
+            // <--- context.mounted 체크 추가
             onRefreshAssets(); // 새 종목 추가 후 목록 갱신
           }
         },
-        borderRadius: BorderRadius.circular(8.0),
+        borderRadius: BorderRadius.circular(
+          12.0,
+        ), // Card의 borderRadius와 일치시켜야 효과가 자연스러움
         child: const Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,

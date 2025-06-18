@@ -1,7 +1,7 @@
 // lib/widgets/account_card.dart
 import 'package:flutter/material.dart';
 import 'package:assets_snapshot/models/account.dart';
-import 'package:assets_snapshot/screens/account_detail_screen.dart';
+import 'package:assets_snapshot/screens/asset_list_screen.dart';
 
 class AccountCard extends StatelessWidget {
   final Account account;
@@ -22,7 +22,8 @@ class AccountCard extends StatelessWidget {
         final result = await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => AccountDetailScreen(account: account),
+            builder: (context) =>
+                AssetListScreen(account: account, onAssetUpdated: () {}),
           ),
         );
         if (result == true) {

@@ -1,12 +1,16 @@
 // lib/screens/add_account_screen.dart
-
-import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
-import 'package:assets_snapshot/models/account.dart';
 import 'package:assets_snapshot/database/database_helper.dart';
+import 'package:assets_snapshot/models/account.dart';
 
 class AddAccountScreen extends StatefulWidget {
-  const AddAccountScreen({super.key});
+  // Account 객체를 선택적으로 받도록 변경합니다.
+  final Account? account; // 기존 계좌를 수정할 경우 전달받을 Account 객체
+
+  const AddAccountScreen({
+    super.key,
+    this.account, // account를 선택적(nullable) 매개변수로 정의
+  });
 
   @override
   State<AddAccountScreen> createState() => _AddAccountScreenState();
@@ -16,8 +20,17 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
-
   final DatabaseHelper _dbHelper = DatabaseHelper();
+
+  @override
+  void initState() {
+    super.initState();
+    // 수정 모드일 경우, 전달받은 account 객체의 값을 컨트롤러에 미리 채웁니다.
+    if (widget.account != null) {
+      _nameController.text = widget.account!.name;
+      _descriptionController.text = widget.account!.description ?? '';
+    }
+  }
 
   @override
   void dispose() {
@@ -26,62 +39,66 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
     super.dispose();
   }
 
-  Future<void> _addAccount() async {
+  Future<void> _saveAccount() async {
     if (_formKey.currentState!.validate()) {
-      final String now = DateFormat(
-        'yyyy-MM-dd HH:mm:ss',
-      ).format(DateTime.now());
+      final now = DateTime.now().toIso8601String(); // ISO 8601 형식 문자열
 
-      final newAccount = Account(
-        name: _nameController.text,
-        description: _descriptionController.text.isNotEmpty
-            ? _descriptionController.text
-            : null,
-        createdAt: now,
-        updatedAt: now,
-      );
-
-      try {
+      // 수정 모드인지, 추가 모드인지 확인
+      if (widget.account != null) {
+        // 수정 모드: 기존 계좌 정보 업데이트
+        final updatedAccount = Account(
+          id: widget.account!.id, // 기존 ID 유지
+          name: _nameController.text,
+          description: _descriptionController.text.isNotEmpty
+              ? _descriptionController.text
+              : null,
+          createdAt: widget.account!.createdAt, // 기존 생성 시간 유지
+          updatedAt: now, // 현재 시간으로 업데이트 시간 변경
+        );
+        await _dbHelper.updateAccount(updatedAccount);
+        if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('계좌 정보가 수정되었습니다.')));
+      } else {
+        // 추가 모드: 새 계좌 생성
+        final newAccount = Account(
+          name: _nameController.text,
+          description: _descriptionController.text.isNotEmpty
+              ? _descriptionController.text
+              : null,
+          createdAt: now,
+          updatedAt: now,
+        );
         await _dbHelper.insertAccount(newAccount);
         if (!mounted) return;
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('계좌가 성공적으로 추가되었습니다!')));
-        Navigator.pop(context, true);
-      } catch (e) {
-        String errorMessage = '계좌 추가 실패: $e';
-        if (e.toString().contains('UNIQUE constraint failed: Accounts.name')) {
-          errorMessage = '이미 같은 이름의 계좌가 존재합니다. 다른 이름을 사용해주세요.';
-        }
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(errorMessage)));
+        ).showSnackBar(const SnackBar(content: Text('새 계좌가 추가되었습니다.')));
       }
+
+      Navigator.of(context).pop(true); // 성공적으로 저장 후 true 반환하며 이전 화면으로 돌아감
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('새 계좌 추가')),
-      body: Padding(
+      appBar: AppBar(title: Text(widget.account == null ? '새 계좌 추가' : '계좌 수정')),
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               TextFormField(
                 controller: _nameController,
-                // === 수정 시작 ===
-                decoration: InputDecoration(
-                  // const 키워드 제거
-                  labelText: '계좌명 (필수)',
-                  border: OutlineInputBorder(), // 테마에서 제공하는 기본 테두리 스타일 적용
-                  filled: true, // 이 부분을 true로 설정해야 테마의 fillColor가 적용됩니다.
+                decoration: const InputDecoration(
+                  labelText: '계좌명',
+                  hintText: '예: 주식 투자 계좌',
+                  border: OutlineInputBorder(),
                 ),
-                style: TextStyle(color: Colors.black), // 입력되는 글씨 색상을 검정색으로 명시
-                // === 수정 끝 ===
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return '계좌명을 입력해주세요.';
@@ -89,27 +106,27 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: 16.0),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _descriptionController,
-                // === 수정 시작 ===
-                decoration: InputDecoration(
-                  // const 키워드 제거
-                  labelText: '설명 (선택 사항)',
-                  border: OutlineInputBorder(),
-                  filled: true, // 이 부분을 true로 설정해야 테마의 fillColor가 적용됩니다.
-                ),
-                style: TextStyle(color: Colors.black), // 입력되는 글씨 색상을 검정색으로 명시
-                // === 수정 끝 ===
                 maxLines: 3,
-              ),
-              const SizedBox(height: 24.0),
-              ElevatedButton(
-                onPressed: _addAccount,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12.0),
+                decoration: const InputDecoration(
+                  labelText: '메모 (선택 사항)',
+                  hintText: '예: 비상금 투자 목적',
+                  alignLabelWithHint: true,
+                  border: OutlineInputBorder(),
                 ),
-                child: const Text('계좌 추가하기', style: TextStyle(fontSize: 18.0)),
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton(
+                onPressed: _saveAccount,
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(50), // 버튼 높이
+                ),
+                child: Text(
+                  widget.account == null ? '계좌 추가하기' : '계좌 수정하기',
+                  style: const TextStyle(fontSize: 18),
+                ),
               ),
             ],
           ),
