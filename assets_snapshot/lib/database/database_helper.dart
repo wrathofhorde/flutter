@@ -33,7 +33,7 @@ class DatabaseHelper {
     debugPrint(path);
     return await openDatabase(
       path,
-      version: 3, // 데이터베이스 버전 변경 (asset_location, asset_snapshots 테이블 추가)
+      version: 1,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade, // onUpgrade 콜백 추가
     );
@@ -83,42 +83,7 @@ class DatabaseHelper {
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 2) {
-      await db.execute(
-        "ALTER TABLE assets ADD COLUMN asset_location TEXT NOT NULL DEFAULT 'domestic'",
-      );
-      // asset_snapshots 테이블이 없었다면 생성 (이전 스키마)
-      await db.execute('''
-        CREATE TABLE IF NOT EXISTS asset_snapshots(
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          asset_id INTEGER NOT NULL,
-          snapshot_date TEXT NOT NULL,
-          current_value REAL NOT NULL, -- 이전 버전에서는 purchase_price가 없었음
-          FOREIGN KEY (asset_id) REFERENCES assets (id) ON DELETE CASCADE
-        )
-      ''');
-      debugPrint(
-        'Upgraded to version 2: asset_location added, asset_snapshots created.',
-      );
-    }
-
-    if (oldVersion < 3) {
-      // asset_snapshots 테이블에 purchase_price 컬럼 추가
-      await db.execute(
-        "ALTER TABLE asset_snapshots ADD COLUMN purchase_price INTEGER",
-      );
-      // currentValue, profitRate, profitRateChange도 스네이크 케이스로 변경하려면
-      // SQLite는 ALTER TABLE RENAME COLUMN을 지원합니다.
-      // 하지만 이미 데이터가 있다면 복잡해질 수 있습니다.
-      // ALTER TABLE asset_snapshots RENAME COLUMN currentValue TO current_value;
-      // ALTER TABLE asset_snapshots RENAME COLUMN profitRate TO profit_rate;
-      // ALTER TABLE asset_snapshots RENAME COLUMN profitRateChange TO profit_rate_change;
-      // 복잡하므로 이 부분은 모델의 toMap/fromMap에서 처리하는 것이 더 일반적입니다.
-      // DB 스키마는 최초 생성 시 맞춰놓고, 이후 마이그레이션은 컬럼 추가/삭제 위주로 합니다.
-      debugPrint(
-        'Upgraded to version 3: purchase_price added to asset_snapshots.',
-      );
-    }
+    //
   }
 
   // --- Account CRUD Operations ---
@@ -134,9 +99,22 @@ class DatabaseHelper {
   Future<List<Account>> getAccounts() async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query('accounts');
-    return List.generate(maps.length, (i) {
-      return Account.fromMap(maps[i]);
-    });
+
+    List<Account> accounts = [];
+    for (var map in maps) {
+      Account account = Account.fromMap(map);
+      // 각 계좌의 요약 정보 로드
+      if (account.id != null) {
+        Map<String, double> summary = await getAccountSummary(account.id!);
+        account = account.copyWith(
+          totalPurchasePrice: summary['totalPurchasePrice'],
+          totalCurrentValue: summary['totalCurrentValue'],
+          totalProfitRate: summary['totalProfitRate'],
+        );
+      }
+      accounts.add(account);
+    }
+    return accounts;
   }
 
   Future<int> updateAccount(Account account) async {
@@ -170,20 +148,31 @@ class DatabaseHelper {
       [accountId],
     );
 
-    double totalPurchasePrice =
-        (result.first['totalPurchasePrice'] as num?)?.toDouble() ?? 0.0;
-    double totalCurrentValue =
-        (result.first['totalCurrentValue'] as num?)?.toDouble() ?? 0.0;
-    double totalProfitRate = 0.0;
+    double totalPurchase =
+        (result.isNotEmpty && result.first['totalPurchasePrice'] != null)
+        ? (result.first['totalPurchasePrice'] as num).toDouble()
+        : 0.0;
+    double totalCurrent =
+        (result.isNotEmpty && result.first['totalCurrentValue'] != null)
+        ? (result.first['totalCurrentValue'] as num)
+              .toDouble() // 수정: result.first['totalCurrentValue']로 수정해야 합니다
+        : 0.0;
 
-    if (totalPurchasePrice > 0) {
+    // 이전에 발생했던 오타를 수정합니다: `currentValue` -> `totalCurrentValue`
+    totalCurrent =
+        (result.isNotEmpty && result.first['totalCurrentValue'] != null)
+        ? (result.first['totalCurrentValue'] as num).toDouble()
+        : 0.0;
+
+    double totalProfitRate = 0.0;
+    if (totalPurchase > 0) {
       totalProfitRate =
-          ((totalCurrentValue - totalPurchasePrice) / totalPurchasePrice) * 100;
+          ((totalCurrent - totalPurchase) / totalPurchase) * 100.0;
     }
 
     return {
-      'totalPurchasePrice': totalPurchasePrice,
-      'totalCurrentValue': totalCurrentValue,
+      'totalPurchasePrice': totalPurchase,
+      'totalCurrentValue': totalCurrent,
       'totalProfitRate': totalProfitRate,
     };
   }
