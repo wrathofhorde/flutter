@@ -19,6 +19,8 @@ class _PricePageState extends State<PricePage> {
   bool _hasFetchedData = false;
   String _apiDataDisplay = "";
   String _currentDateTitle = "";
+  // 1. 새로운 상태 변수 추가: 버튼 활성화/비활성화 상태 제어
+  bool _isProcessing = false;
 
   late final Days _days;
   late final CoinPriceDb _priceDb;
@@ -39,6 +41,10 @@ class _PricePageState extends State<PricePage> {
     if (!_hasFetchedData) {
       _days = Provider.of<Days>(context, listen: false);
       _priceDb = Provider.of<CoinPriceDb>(context, listen: false);
+
+      // 비동기 작업 시작 시 _isProcessing을 true로 설정
+      _setProcessingState(true);
+
       if (_days.lastUpdateDay == _days.yesterday) {
         setState(() {
           _apiDataDisplay += '최신 데이터로 업데이트 되어 있습니다.\n';
@@ -49,6 +55,7 @@ class _PricePageState extends State<PricePage> {
           setState(() {
             _apiDataDisplay += _lastInfo;
           });
+          _setProcessingState(false); // 작업 완료 시 _isProcessing을 false로 설정
         }
       } else {
         _fetchAndDisplayPrices(); // 비동기 함수 호출 시작
@@ -57,10 +64,16 @@ class _PricePageState extends State<PricePage> {
     }
   }
 
+  // 헬퍼 메서드를 사용하여 _isProcessing 상태를 관리
+  void _setProcessingState(bool processing) {
+    setState(() {
+      _isProcessing = processing;
+    });
+  }
+
   void _updateDateTitle() {
     final now = DateTime.now();
     final formatter = DateFormat('yyyy년 M월 d일(E)', 'ko_KR');
-    // final formatter = DateFormat('yyyy년 MM월 dd일 EEEE', 'ko_KR');
     setState(() {
       _currentDateTitle = formatter.format(now);
     });
@@ -88,6 +101,8 @@ class _PricePageState extends State<PricePage> {
       setState(() {
         _apiDataDisplay = '데이터 불러오기 중 오류 발생했습니다.';
       });
+    } finally {
+      _setProcessingState(false); // 작업 완료 (성공/실패 무관) 시 _isProcessing을 false로 설정
     }
   }
 
@@ -125,7 +140,7 @@ class _PricePageState extends State<PricePage> {
       setState(() {
         _apiDataDisplay += "주요 코인 가격 정보 저장 중...\n";
       });
-      _priceDb.bulkInsertMajorCoinPrices(params: coinPirces);
+      await _priceDb.bulkInsertMajorCoinPrices(params: coinPirces); // await 추가
       setState(() {
         _apiDataDisplay += '주요 코인 가격 정보 저장이 완료되었습니다.\n';
         _apiDataDisplay += '"가격 정보 보기" 페이지에서 확인할 수 있습니다.';
@@ -136,6 +151,8 @@ class _PricePageState extends State<PricePage> {
         _apiDataDisplay += "인터넷 연결을 확인하거나 잠시 후 다시 시도해 주세요.";
       });
       debugPrint('API 호출 중 오류 발생: $e');
+    } finally {
+      _setProcessingState(false); // 작업 완료 (성공/실패 무관) 시 _isProcessing을 false로 설정
     }
   }
 
@@ -204,20 +221,25 @@ class _PricePageState extends State<PricePage> {
                 width: 200,
                 height: 50,
                 child: Tooltip(
-                  // Tooltip 위젯 추가
                   message: '코인 가격 그래프, 직전 달 일년 평균 가격을 확인합니다.',
                   child: TextButton(
-                    onPressed: () {
-                      Navigator.of(
-                        context,
-                      ).push(_createSlideRoute(const GraphPage()));
-                    },
-                    child: const Text(
+                    // 4. _isProcessing 상태에 따라 onPressed 콜백을 조건부로 설정
+                    onPressed: _isProcessing
+                        ? null // _isProcessing이 true면 null을 할당하여 버튼 비활성화
+                        : () {
+                            Navigator.of(
+                              context,
+                            ).push(_createSlideRoute(const GraphPage()));
+                          },
+                    child: Text(
                       '가격 정보 보기',
                       style: TextStyle(
-                        color: Colors.blueAccent,
+                        color: _isProcessing
+                            ? Colors
+                                  .grey // 비활성화 시 색상 변경
+                            : Colors.blueAccent, // 활성화 시 색상
                         fontSize: subtitleFontSize,
-                      ), // 버튼 텍스트 색상
+                      ),
                     ),
                   ),
                 ),
