@@ -186,20 +186,11 @@ class _GraphPageState extends State<GraphPage> {
 
     return Scaffold(
       appBar: AppBar(
-        // leading 속성을 null로 설정하여 백 버튼을 제거합니다.
         leading: null,
-        automaticallyImplyLeading: false, // 이 설정도 false로 하여 자동 생성 방지
+        automaticallyImplyLeading: false,
         title: Text(_currentDateTitle),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         centerTitle: true,
-        actions: [
-          // CSV 저장 버튼 추가
-          IconButton(
-            icon: const Icon(Icons.download),
-            onPressed: _saveDailyDataAsCsv, // CSV 저장 함수 호출
-            tooltip: '일별 코인 가격 CSV로 저장',
-          ),
-        ],
       ),
       body: SelectionArea(
         child: SingleChildScrollView(
@@ -209,11 +200,7 @@ class _GraphPageState extends State<GraphPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
                 // --- 1. 집계 가격 정보 테이블 ---
-                CoinPriceTable(
-                  // startDate: _days.startDay,
-                  // endDate: _days.endDay,
-                  yearAggregatedData: _yearAggregatedData,
-                ),
+                CoinPriceTable(yearAggregatedData: _yearAggregatedData),
                 const SizedBox(height: 10),
                 // --- 2. 코인별 그래프 섹션 ---
                 const Text(
@@ -254,27 +241,39 @@ class _GraphPageState extends State<GraphPage> {
           ),
         ),
       ),
-      // !!! 원래 페이지로 돌아갈 버튼 추가 !!!
       bottomNavigationBar: SizedBox(
         height: 60,
         child: BottomAppBar(
           color: Theme.of(context).colorScheme.primaryContainer,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          // Stack을 사용하여 위젯을 겹치고 위치를 정밀하게 제어
+          child: Stack(
             children: [
-              SizedBox(
-                width: 200,
-                height: 50,
-                child: TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text(
-                    '메인으로 돌아가기',
-                    style: TextStyle(
-                      color: Colors.blueAccent,
-                      fontSize: 18,
-                    ), // 버튼 텍스트 색상
+              // '메인으로 돌아가기' 버튼 (중앙 정렬)
+              Align(
+                alignment: Alignment.center, // 중앙 정렬
+                child: SizedBox(
+                  width: 200,
+                  height: 50,
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text(
+                      '메인으로 돌아가기',
+                      style: TextStyle(color: Colors.blueAccent, fontSize: 18),
+                    ),
+                  ),
+                ),
+              ),
+              // CSV 다운로드 아이콘 버튼 (오른쪽 하단 정렬)
+              Positioned(
+                right: 10, // 오른쪽에서 10px 떨어진 위치
+                bottom: 0, // 하단에 정렬 (BottomAppBar의 높이에 따라 조정될 수 있음)
+                child: Tooltip(
+                  message: 'CSV 저장',
+                  child: IconButton(
+                    icon: const Icon(Icons.download, color: Colors.blueAccent),
+                    onPressed: _saveDailyDataAsCsv,
                   ),
                 ),
               ),
@@ -284,9 +283,4 @@ class _GraphPageState extends State<GraphPage> {
       ),
     );
   }
-
-  // 이 함수들은 이제 CoinPriceTable 위젯 내부로 이동했습니다.
-  // TableRow _buildTableDataRow(String coinName, Map<String, dynamic> data) { ... }
-  // Widget _buildTableCell(String text, { ... }) { ... }
-  // Widget _buildTableHeaderCell(String text) { ... }
 }
