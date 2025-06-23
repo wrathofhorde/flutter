@@ -186,6 +186,9 @@ class _GraphPageState extends State<GraphPage> {
 
     return Scaffold(
       appBar: AppBar(
+        // leading 속성을 null로 설정하여 백 버튼을 제거합니다.
+        leading: null,
+        automaticallyImplyLeading: false, // 이 설정도 false로 하여 자동 생성 방지
         title: Text(_currentDateTitle),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         centerTitle: true,
