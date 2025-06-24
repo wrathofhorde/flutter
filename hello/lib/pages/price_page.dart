@@ -162,7 +162,10 @@ class _PricePageState extends State<PricePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_currentDateTitle),
+        title: Text(
+          _currentDateTitle,
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         centerTitle: true,
       ),

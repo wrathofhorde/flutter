@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:csv/csv.dart';
-import 'package:intl/intl.dart';
+// import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -25,7 +25,7 @@ class _GraphPageState extends State<GraphPage> {
   String _currentDateTitle = "";
   late final Days _days;
   late final CoinPriceDb _priceDb;
-  final _formatter = DateFormat('yyyy년 M월 d일(E)', 'ko_KR');
+  // final _formatter = DateFormat('yyyy년 M월 d일(E)', 'ko_KR'); // 이 포맷터는 더 이상 앱바 타이틀에 직접 사용되지 않습니다.
 
   List<CoinData> _dailyCoinData = [];
   Map<String, dynamic>? _yearAggregatedData;
@@ -33,7 +33,8 @@ class _GraphPageState extends State<GraphPage> {
   @override
   void initState() {
     super.initState();
-    _updateDateTitle();
+    // initState에서는 _days가 아직 초기화되지 않았으므로 _updateDateTitle 호출을 didChangeDependencies로 옮기거나,
+    // initState에서 _days를 직접 초기화해야 합니다. 여기서는 didChangeDependencies에서 처리하는 방식 유지.
   }
 
   @override
@@ -47,21 +48,14 @@ class _GraphPageState extends State<GraphPage> {
     }
   }
 
-  void _updateDateTitle() {
-    final now = DateTime.now();
-
-    setState(() {
-      _currentDateTitle = _formatter.format(now);
-    });
-  }
-
   Future<void> _fetchAndDisplayPrices() async {
+    // _days 객체에서 현재 표시될 날짜를 가져옵니다.
     final startDate = _days.startDay;
     final endDate = _days.endDay;
 
     try {
       setState(() {
-        _currentDateTitle = '${_days.startDay} ~ ${_days.endDay}';
+        _currentDateTitle = '$startDate ~ $endDate';
       });
       final dailyData = await _priceDb.getCoinDataByDateRange(
         startDate: startDate,
@@ -182,15 +176,60 @@ class _GraphPageState extends State<GraphPage> {
 
   @override
   Widget build(BuildContext context) {
+    const double titleFontSize = 24;
     const double subtitleFontSize = 18;
+    const double iconBtnSideMargin = 120.0;
 
     return Scaffold(
       appBar: AppBar(
         leading: null,
         automaticallyImplyLeading: false,
-        title: Text(_currentDateTitle),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         centerTitle: true,
+        // AppBar의 title을 Stack으로 변경하여 아이콘 버튼과 겹쳐서 배치
+        title: SizedBox(
+          // AppBar의 title 공간을 차지하도록 SizedBox로 감쌈
+          width: double.infinity, // 가로 전체를 사용하도록 함
+          child: Stack(
+            alignment:
+                Alignment.center, // Stack의 기본 정렬을 중앙으로 설정 (Text 위젯 중앙 정렬)
+            children: [
+              // 텍스트 타이틀
+              Text(
+                _currentDateTitle,
+                style: const TextStyle(
+                  fontSize: titleFontSize,
+                  fontWeight: FontWeight.bold,
+                ), // 타이틀 텍스트 스타일
+                textAlign: TextAlign.center, // 텍스트 자체를 중앙 정렬
+              ),
+              // 이전 날짜 보기 버튼
+              Positioned(
+                left: iconBtnSideMargin, // AppBar의 왼쪽 끝에 붙임
+                child: IconButton(
+                  icon: const Icon(Icons.chevron_left, size: 30),
+                  onPressed: () {
+                    _days.goToPreviousMonth(); // 이전 달로 이동
+                    _fetchAndDisplayPrices(); // 변경된 날짜로 데이터 다시 불러오기
+                  },
+                  tooltip: '이전 기간 보기',
+                ),
+              ),
+              // 다음 날짜 보기 버튼
+              Positioned(
+                right: iconBtnSideMargin, // AppBar의 오른쪽 끝에 붙임
+                child: IconButton(
+                  icon: const Icon(Icons.chevron_right, size: 30),
+                  onPressed: () {
+                    _days.goToNextMonth(); // 다음 달로 이동
+                    _fetchAndDisplayPrices(); // 변경된 날짜로 데이터 다시 불러오기
+                  },
+                  tooltip: '다음 기간 보기',
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
       body: SelectionArea(
         child: SingleChildScrollView(
