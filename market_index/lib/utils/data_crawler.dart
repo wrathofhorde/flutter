@@ -539,6 +539,9 @@ Future<void> runDataCollectionAndSave() async {
       );
     }
 
+    // 테이블 전환 시 1초 딜레이 추가
+    await Future.delayed(Duration(seconds: 1));
+
     // Dollar Index 크롤링 및 저장
     DateTime? latestDollarIndexDate = await DatabaseHelper.getLatestDate(
       'dollar_index',
