@@ -9,6 +9,9 @@ import 'data/database_helper.dart';
 import 'models/data_models.dart';
 import 'utils/data_crawler.dart';
 import 'widgets/gold_silver_chart.dart';
+import 'widgets/gold_silver_ratio_chart.dart';
+import 'widgets/gold_dollar_index_chart.dart';
+import 'widgets/usd_krw_dollar_index_chart.dart'; // UsdKrwDollarIndexChart import 추가
 
 // 앱 시작점
 Future<void> main() async {
@@ -72,139 +75,106 @@ class _MyHomePageState extends State<MyHomePage> {
     double avgDollarIndex = 0.0;
     double avgGoldSilverRatio = 0.0;
 
-    if (rawData.isNotEmpty) {
-      List<UsdKrwData> usdKrwList = rawData
-          .where((e) => e.containsKey('usd_krw') && e['usd_krw'] != null)
-          .map(
-            (e) => UsdKrwData(
-              date: e['date'] is String
-                  ? DateTime.parse(e['date'] as String)
-                  : e['date'] as DateTime,
-              rate: e['usd_krw'] as double,
-            ),
-          )
-          .toList();
-      if (usdKrwList.isNotEmpty) {
-        avgUsdKrw = usdKrwList.map((e) => e.rate).average;
-      }
+    // 데이터 파싱 및 보간 (기존 로직은 그대로 유지)
+    List<UsdKrwData> usdKrwList = rawData
+        .where((e) => e.containsKey('usd_krw') && e['usd_krw'] != null)
+        .map(
+          (e) => UsdKrwData(
+            date: e['date'] is String
+                ? DateTime.parse(e['date'] as String)
+                : e['date'] as DateTime,
+            rate: e['usd_krw'] as double,
+          ),
+        )
+        .toList();
+    if (usdKrwList.isNotEmpty) {
+      avgUsdKrw = usdKrwList.map((e) => e.rate).average;
+    }
 
-      List<GoldData> goldList = rawData
-          .where((e) => e.containsKey('gold_price') && e['gold_price'] != null)
-          .map(
-            (e) => GoldData(
-              date: e['date'] is String
-                  ? DateTime.parse(e['date'] as String)
-                  : e['date'] as DateTime,
-              price: e['gold_price'] as double,
-            ),
-          )
-          .toList();
-      if (goldList.isNotEmpty) {
-        avgGoldPrice = goldList.map((e) => e.price).average;
-      }
+    List<GoldData> goldList = rawData
+        .where((e) => e.containsKey('gold_price') && e['gold_price'] != null)
+        .map(
+          (e) => GoldData(
+            date: e['date'] is String
+                ? DateTime.parse(e['date'] as String)
+                : e['date'] as DateTime,
+            price: e['gold_price'] as double,
+          ),
+        )
+        .toList();
+    if (goldList.isNotEmpty) {
+      avgGoldPrice = goldList.map((e) => e.price).average;
+    }
 
-      List<SilverData> silverList = rawData
-          .where(
-            (e) => e.containsKey('silver_price') && e['silver_price'] != null,
-          )
-          .map(
-            (e) => SilverData(
-              date: e['date'] is String
-                  ? DateTime.parse(e['date'] as String)
-                  : e['date'] as DateTime,
-              price: e['silver_price'] as double,
-            ),
-          )
-          .toList();
-      if (silverList.isNotEmpty) {
-        avgSilverPrice = silverList.map((e) => e.price).average;
-      }
+    List<SilverData> silverList = rawData
+        .where(
+          (e) => e.containsKey('silver_price') && e['silver_price'] != null,
+        )
+        .map(
+          (e) => SilverData(
+            date: e['date'] is String
+                ? DateTime.parse(e['date'] as String)
+                : e['date'] as DateTime,
+            price: e['silver_price'] as double,
+          ),
+        )
+        .toList();
+    if (silverList.isNotEmpty) {
+      avgSilverPrice = silverList.map((e) => e.price).average;
+    }
 
-      List<DollarIndexData> dollarIndexList = rawData
-          .where(
-            (e) =>
-                e.containsKey('dollar_index_price') &&
-                e['dollar_index_price'] != null,
-          )
-          .map(
-            (e) => DollarIndexData(
-              date: e['date'] is String
-                  ? DateTime.parse(e['date'] as String)
-                  : e['date'] as DateTime,
-              price: e['dollar_index_price'] as double,
-            ),
-          )
-          .toList();
-      if (dollarIndexList.isNotEmpty) {
-        avgDollarIndex = dollarIndexList.map((e) => e.price).average;
-      }
+    List<DollarIndexData> dollarIndexList = rawData
+        .where(
+          (e) =>
+              e.containsKey('dollar_index_price') &&
+              e['dollar_index_price'] != null,
+        )
+        .map(
+          (e) => DollarIndexData(
+            date: e['date'] is String
+                ? DateTime.parse(e['date'] as String)
+                : e['date'] as DateTime,
+            price: e['dollar_index_price'] as double,
+          ),
+        )
+        .toList();
+    if (dollarIndexList.isNotEmpty) {
+      avgDollarIndex = dollarIndexList.map((e) => e.price).average;
+    }
 
-      List<double> goldSilverRatios = [];
-      for (var item in rawData) {
-        if (item.containsKey('gold_price') &&
-            item.containsKey('silver_price') &&
-            item['gold_price'] != null &&
-            item['silver_price'] != null &&
-            item['silver_price'] != 0) {
-          goldSilverRatios.add(item['gold_price'] / item['silver_price']);
-        }
-      }
-      if (goldSilverRatios.isNotEmpty) {
-        avgGoldSilverRatio = goldSilverRatios.average;
+    // 금/은 비율 데이터 계산
+    List<GoldSilverRatioData> goldSilverRatioList = [];
+    final allDates = <DateTime>{};
+    goldList.forEach((data) => allDates.add(data.date));
+    silverList.forEach((data) => allDates.add(data.date));
+    final sortedUniqueDates = allDates.toList()..sort((a, b) => a.compareTo(b));
+
+    for (var date in sortedUniqueDates) {
+      GoldData? gold = goldList.firstWhereOrNull((d) => d.date == date);
+      SilverData? silver = silverList.firstWhereOrNull((d) => d.date == date);
+
+      if (gold != null && silver != null && silver.price != 0) {
+        double ratio = gold.price / silver.price;
+        goldSilverRatioList.add(GoldSilverRatioData(date: date, ratio: ratio));
+      } else {
+        developer.log(
+          'Warning: Gold or Silver data missing or Silver price is zero for date: $date. Cannot calculate ratio.',
+          name: '_loadDataAndCalculateMetrics',
+        );
       }
     }
 
+    if (goldSilverRatioList.isNotEmpty) {
+      avgGoldSilverRatio = goldSilverRatioList.map((e) => e.ratio).average;
+    }
+    // 금/은 비율 데이터 계산 끝
+
     final allFinancialData = AllFinancialData(
-      usdKrw: rawData
-          .where((e) => e.containsKey('usd_krw') && e['usd_krw'] != null)
-          .map(
-            (e) => UsdKrwData(
-              date: e['date'] is String
-                  ? DateTime.parse(e['date'] as String)
-                  : e['date'] as DateTime,
-              rate: e['usd_krw'] as double,
-            ),
-          )
-          .toList(),
-      gold: rawData
-          .where((e) => e.containsKey('gold_price') && e['gold_price'] != null)
-          .map(
-            (e) => GoldData(
-              date: e['date'] is String
-                  ? DateTime.parse(e['date'] as String)
-                  : e['date'] as DateTime,
-              price: e['gold_price'] as double,
-            ),
-          )
-          .toList(),
-      silver: rawData
-          .where(
-            (e) => e.containsKey('silver_price') && e['silver_price'] != null,
-          )
-          .map(
-            (e) => SilverData(
-              date: e['date'] is String
-                  ? DateTime.parse(e['date'] as String)
-                  : e['date'] as DateTime,
-              price: e['silver_price'] as double,
-            ),
-          )
-          .toList(),
-      dollarIndex: rawData
-          .where(
-            (e) =>
-                e.containsKey('dollar_index_price') &&
-                e['dollar_index_price'] != null,
-          )
-          .map(
-            (e) => DollarIndexData(
-              date: e['date'] is String
-                  ? DateTime.parse(e['date'] as String)
-                  : e['date'] as DateTime,
-              price: e['dollar_index_price'] as double,
-            ),
-          )
-          .toList(),
+      usdKrw: usdKrwList,
+      gold: goldList,
+      silver: silverList,
+      dollarIndex: dollarIndexList,
+      goldSilverRatio: goldSilverRatioList,
     );
 
     return {
@@ -376,15 +346,24 @@ class _MyHomePageState extends State<MyHomePage> {
                     monthsToShow: displayMonths,
                   ),
                   const SizedBox(height: 20),
-                  // TODO: 여기에 다른 차트를 하나씩 추가할 예정입니다.
-                  Center(child: Text('Gold/Silver Ratio 차트가 여기에 표시될 예정입니다.')),
-                  const SizedBox(height: 20),
-                  Center(
-                    child: Text('Gold vs Dollar Index 차트가 여기에 표시될 예정입니다.'),
+                  // Gold/Silver Ratio 차트
+                  GoldSilverRatioChart(
+                    ratioData: financialData.goldSilverRatio,
+                    monthsToShow: displayMonths,
                   ),
                   const SizedBox(height: 20),
-                  Center(
-                    child: Text('USD/KRW vs Dollar Index 차트가 여기에 표시될 예정입니다.'),
+                  // Gold Price vs Dollar Index 차트
+                  GoldDollarIndexChart(
+                    goldData: financialData.gold,
+                    dollarIndexData: financialData.dollarIndex,
+                    monthsToShow: displayMonths,
+                  ),
+                  const SizedBox(height: 20),
+                  // USD/KRW vs Dollar Index 차트 추가
+                  UsdKrwDollarIndexChart(
+                    usdKrwData: financialData.usdKrw,
+                    dollarIndexData: financialData.dollarIndex,
+                    monthsToShow: displayMonths,
                   ),
                   const SizedBox(height: 20),
                 ],
@@ -450,7 +429,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       ),
                     ),
                   )
-                  .toList(), // <--- 이 부분에 .toList() 추가
+                  .toList(),
             ),
             const Divider(height: 10),
             Row(
@@ -473,7 +452,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       ),
                     ),
                   )
-                  .toList(), // <--- 이 부분에 .toList() 추가
+                  .toList(),
             ),
           ],
         ),

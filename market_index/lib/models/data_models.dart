@@ -76,17 +76,31 @@ class DollarIndexData {
   }
 }
 
-// 모든 데이터를 한번에 담을 수 있는 모델 (선택 사항이지만 편리함)
+class GoldSilverRatioData {
+  final DateTime date;
+  final double ratio;
+
+  GoldSilverRatioData({required this.date, required this.ratio});
+
+  @override
+  String toString() {
+    return 'GoldSilverRatioData(date: $date, ratio: $ratio)';
+  }
+}
+
+// AllFinancialData 클래스에도 goldSilverRatio 추가
 class AllFinancialData {
   final List<UsdKrwData> usdKrw;
   final List<GoldData> gold;
   final List<SilverData> silver;
   final List<DollarIndexData> dollarIndex;
+  final List<GoldSilverRatioData> goldSilverRatio; // 새로 추가
 
   AllFinancialData({
     required this.usdKrw,
     required this.gold,
     required this.silver,
     required this.dollarIndex,
+    required this.goldSilverRatio, // 생성자에도 추가
   });
 }
