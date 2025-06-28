@@ -145,7 +145,7 @@ class UsdKrwDollarIndexChart extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'USD/KRW vs Dollar Index (지난 ${monthsToShow == 999 ? "모든" : monthsToShow}개월)',
+              'USD/KRW vs Dollar Index',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 20),

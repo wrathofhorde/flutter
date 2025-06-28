@@ -122,7 +122,7 @@ class GoldSilverChart extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Gold vs Silver Prices (지난 ${monthsToShow == 999 ? "모든" : monthsToShow}개월)',
+              'Gold vs Silver Prices',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 20),

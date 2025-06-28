@@ -27,7 +27,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '환율 및 원자재 현황',
+      title: '환율 및 원자재 현황', // 이 타이틀은 앱 관리용으로 사용될 수 있습니다. (앱 실행기 등)
       theme: ThemeData(
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
@@ -47,6 +47,7 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   late Future<Map<String, dynamic>> _dataFuture;
   int _monthsToShow = 36;
+  String _appBarTitle = '환율 및 원자재 36개월 데이터 현황'; // 초기 앱 바 타이틀 설정
 
   @override
   void initState() {
@@ -68,6 +69,12 @@ class _MyHomePageState extends State<MyHomePage> {
       _monthsToShow == 999 ? 9999 : _monthsToShow,
     );
     developer.log('${rawData.length}개의 데이터 로드 완료.', name: 'MyHomePage');
+
+    // 앱 바 타이틀 업데이트
+    setState(() {
+      _appBarTitle =
+          '환율 및 원자재 ${_monthsToShow == 999 ? "모든" : "${_monthsToShow}개월"} 데이터 현황';
+    });
 
     double avgUsdKrw = 0.0;
     double avgGoldPrice = 0.0;
@@ -145,12 +152,8 @@ class _MyHomePageState extends State<MyHomePage> {
     // 금/은 비율 데이터 계산
     List<GoldSilverRatioData> goldSilverRatioList = [];
     final allDates = <DateTime>{};
-    for (var data in goldList) {
-      allDates.add(data.date);
-    }
-    for (var data in silverList) {
-      allDates.add(data.date);
-    }
+    goldList.forEach((data) => allDates.add(data.date));
+    silverList.forEach((data) => allDates.add(data.date));
     final sortedUniqueDates = allDates.toList()..sort((a, b) => a.compareTo(b));
 
     for (var date in sortedUniqueDates) {
@@ -274,6 +277,7 @@ class _MyHomePageState extends State<MyHomePage> {
     if (selectedMonths != null && selectedMonths != _monthsToShow) {
       setState(() {
         _monthsToShow = selectedMonths;
+        // 기간 변경 시 데이터와 함께 앱 바 타이틀도 새로 로드되도록 합니다.
         _dataFuture = _loadDataAndCalculateMetrics();
       });
     }
@@ -283,7 +287,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('환율 및 원자재 현황'),
+        title: Text(_appBarTitle), // 앱 바 타이틀을 동적 변수로 설정
         actions: [
           IconButton(
             icon: const Icon(Icons.calendar_month),
@@ -337,13 +341,11 @@ class _MyHomePageState extends State<MyHomePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '지난 ${displayMonths == 999 ? "모든" : displayMonths}개월 데이터 현황',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                  const SizedBox(height: 20),
-                  _buildMetricsTable(metrics, displayMonths),
-                  const SizedBox(height: 30),
+                  // 평균 지표 테이블은 그대로 유지됩니다.
+                  // _buildMetricsTable 호출 시 displayMonths 인자 제거
+                  _buildMetricsTable(metrics), // displayMonths 인자 제거
+                  const SizedBox(height: 30), // 테이블과 첫 차트 사이 간격
+
                   GoldSilverChart(
                     goldData: financialData.gold,
                     silverData: financialData.silver,
@@ -381,7 +383,8 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  Widget _buildMetricsTable(Map<String, dynamic> metrics, int months) {
+  // _buildMetricsTable 함수에서 months 인자 제거 및 제목 변경
+  Widget _buildMetricsTable(Map<String, dynamic> metrics) {
     final List<String> labels = [
       'USD/KRW 평균',
       '금 가격 평균 (USD/OZS)',
@@ -408,8 +411,9 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // 테이블 제목에서 기간 정보 삭제
             Text(
-              '평균 지표 (지난 ${months == 999 ? "모든" : months}개월)',
+              '평균 지표', // "지난 X개월" 부분 삭제
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const Divider(),
