@@ -70,7 +70,7 @@ class GoldSilverRatioChart extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Gold/Silver Ratio (지난 ${monthsToShow == 999 ? "모든" : monthsToShow}개월)',
+              'Gold/Silver Ratio',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 20),
