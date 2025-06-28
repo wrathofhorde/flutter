@@ -239,8 +239,9 @@ class UsdKrwDollarIndexChart extends StatelessWidget {
                             // Dollar Index의 실제 범위에 비례하는 간격 사용
                             double dollarIndexDisplayInterval =
                                 dollarIndexRange / 4; // 대략 4개의 라벨
-                            if (dollarIndexDisplayInterval < 0.5)
+                            if (dollarIndexDisplayInterval < 0.5) {
                               dollarIndexDisplayInterval = 0.5; // 최소 간격
+                            }
 
                             double remainder =
                                 (originalDollarIndexValue - minDollarIndex) %
