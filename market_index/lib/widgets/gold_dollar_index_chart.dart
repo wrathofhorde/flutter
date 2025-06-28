@@ -29,19 +29,25 @@ class GoldDollarIndexChart extends StatelessWidget {
     dollarIndexData.sort((a, b) => a.date.compareTo(b.date));
 
     // 공통 날짜 범위의 시작점을 찾습니다.
-    final DateTime firstDate = goldData.first.date;
+    final DateTime firstDate = goldData.first.date; // 금 데이터의 첫 날짜를 기준으로 함
 
-    // Gold 데이터의 최소/최대 가격
+    // Gold 데이터의 최소/최대 가격 및 Y축 패딩
     final double minGoldPrice = goldData.map((e) => e.price).reduce(min);
     final double maxGoldPrice = goldData.map((e) => e.price).reduce(max);
+    final double goldPaddingY = (maxGoldPrice - minGoldPrice) * 0.1;
+    final double finalMinGoldY = minGoldPrice - goldPaddingY;
+    final double finalMaxGoldY = maxGoldPrice + goldPaddingY;
 
-    // Dollar Index 데이터의 최소/최대 가격
+    // Dollar Index 데이터의 최소/최대 가격 및 Y축 패딩 (라벨링을 위함)
     final double minDollarIndex = dollarIndexData
         .map((e) => e.price)
         .reduce(min);
     final double maxDollarIndex = dollarIndexData
         .map((e) => e.price)
         .reduce(max);
+    final double dollarIndexPaddingY = (maxDollarIndex - minDollarIndex) * 0.1;
+    final double finalMinDollarIndexY = minDollarIndex - dollarIndexPaddingY;
+    final double finalMaxDollarIndexY = maxDollarIndex + dollarIndexPaddingY;
 
     // Gold Spots 생성
     final List<FlSpot> goldSpots = goldData
@@ -53,77 +59,35 @@ class GoldDollarIndexChart extends StatelessWidget {
         )
         .toList();
 
-    // Dollar Index 데이터 재조정 (스케일링)
-    // Gold 가격 범위에 Dollar Index를 맞추기 위한 스케일링 상수 계산
-    // Gold의 범위 대비 Dollar Index의 범위 비율을 찾고, 그 비율을 Gold 최저점에 적용
-    final double goldPriceRange = maxGoldPrice - minGoldPrice;
-    final double dollarIndexRange = maxDollarIndex - minDollarIndex;
+    // Dollar Index Spots 생성 - Gold 스케일에 맞춰 변환
+    final List<FlSpot> dollarIndexSpots = dollarIndexData.map((data) {
+      final double originalDollarIndexY = data.price;
+      double scaledDollarIndexY;
 
-    List<FlSpot> dollarIndexSpotsScaled = [];
-
-    // dollarIndexRange가 0이 아니어야 합니다. (모든 값이 동일한 경우 방지)
-    if (dollarIndexRange > 0 && goldPriceRange > 0) {
-      // Dollar Index의 각 값을 Gold 스케일에 맞게 변환합니다.
-      // 1. Dollar Index 값을 0-1 범위로 정규화
-      // 2. 정규화된 값을 Gold의 (minGoldPrice ~ maxGoldPrice) 범위로 스케일링
-      for (var data in dollarIndexData) {
-        double normalizedDollarIndex =
-            (data.price - minDollarIndex) / dollarIndexRange;
-        double scaledDollarIndex =
-            normalizedDollarIndex * goldPriceRange + minGoldPrice;
-        dollarIndexSpotsScaled.add(
-          FlSpot(
-            data.date.difference(firstDate).inDays.toDouble(),
-            scaledDollarIndex,
-          ),
-        );
+      // 달러 인덱스 가격 범위가 0인 경우 예외 처리
+      if ((finalMaxDollarIndexY - finalMinDollarIndexY).abs() < 1e-9) {
+        scaledDollarIndexY = finalMinGoldY;
+      } else {
+        // 달러 인덱스 값을 금 가격의 Y축 범위로 스케일링
+        scaledDollarIndexY =
+            (originalDollarIndexY - finalMinDollarIndexY) *
+                (finalMaxGoldY - finalMinGoldY) /
+                (finalMaxDollarIndexY - finalMinDollarIndexY) +
+            finalMinGoldY;
       }
-    } else {
-      // Dollar Index 범위가 0이거나 Gold 가격 범위가 0인 경우, 스케일링을 적용하지 않거나 기본값 사용
-      developer.log(
-        'Warning: Dollar Index range or Gold Price range is zero. Cannot scale Dollar Index.',
-        name: 'GoldDollarIndexChart',
+      return FlSpot(
+        data.date.difference(firstDate).inDays.toDouble(),
+        scaledDollarIndexY,
       );
-      // 이 경우에는 Dollar Index 값을 그대로 사용하거나 다른 방식으로 처리할 수 있습니다.
-      // 여기서는 그냥 Dollar Index의 첫 값을 사용하여 모든 DollarIndexData에 동일한 스케일 적용 (일단 첫 값에 맞춰서 그리는 방식)
-      if (dollarIndexData.isNotEmpty && goldData.isNotEmpty) {
-        double averageGoldPrice =
-            goldData.map((e) => e.price).reduce((a, b) => a + b) /
-            goldData.length;
-        double firstDollarIndexPrice = dollarIndexData.first.price;
-        // 임시 스케일링 비율: Gold 평균을 Dollar Index 첫 값으로 나눈 비율
-        double scaleFactor = averageGoldPrice / firstDollarIndexPrice;
+    }).toList();
 
-        for (var data in dollarIndexData) {
-          dollarIndexSpotsScaled.add(
-            FlSpot(
-              data.date.difference(firstDate).inDays.toDouble(),
-              data.price * scaleFactor,
-            ),
-          );
-        }
-      }
-    }
+    final double maxX = goldData.last.date
+        .difference(firstDate)
+        .inDays
+        .toDouble();
 
-    // X축 최대값 (두 데이터 중 더 긴 기간을 가진 데이터를 기준으로)
-    final double maxX = max(
-      goldData.last.date.difference(firstDate).inDays.toDouble(),
-      dollarIndexData.last.date.difference(firstDate).inDays.toDouble(),
-    );
-
-    // Y축 범위 및 interval 설정 (Gold 가격 기준으로 통일)
-    final double chartMinY = minGoldPrice - goldPriceRange * 0.1;
-    final double chartMaxY = maxGoldPrice + goldPriceRange * 0.1;
-
-    // Y축 interval 계산 (Gold 가격 기준으로 통일)
-    double chartInterval = (chartMaxY - chartMinY > 0)
-        ? (chartMaxY - chartMinY) / 4
-        : 1.0;
-    if (chartInterval < 10) {
-      // 금 가격은 보통 10단위 이상이므로 간격을 10이상으로
-      chartInterval = 10;
-    }
-    chartInterval = chartInterval.ceilToDouble(); // 정수로 반올림
+    // X축 라벨 간격을 동적으로 계산 (대략 6개의 라벨을 목표)
+    final double xAxisInterval = maxX / 5;
 
     return Card(
       elevation: 4,
@@ -134,7 +98,7 @@ class GoldDollarIndexChart extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Gold Price vs Dollar Index',
+              'Gold vs Dollar Index',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 20),
@@ -142,19 +106,7 @@ class GoldDollarIndexChart extends StatelessWidget {
               aspectRatio: 1.7,
               child: LineChart(
                 LineChartData(
-                  gridData: FlGridData(
-                    show: true,
-                    drawVerticalLine: true,
-                    drawHorizontalLine: true,
-                    getDrawingHorizontalLine: (value) => FlLine(
-                      color: Colors.grey.withAlpha((255 * 0.3).round()),
-                      strokeWidth: 0.5,
-                    ),
-                    getDrawingVerticalLine: (value) => FlLine(
-                      color: Colors.grey.withAlpha((255 * 0.3).round()),
-                      strokeWidth: 0.5,
-                    ),
-                  ),
+                  gridData: const FlGridData(show: false),
                   titlesData: FlTitlesData(
                     show: true,
                     topTitles: const AxisTitles(
@@ -163,105 +115,103 @@ class GoldDollarIndexChart extends StatelessWidget {
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
-                        reservedSize: 40,
+                        interval: xAxisInterval, // 동적으로 계산된 간격 적용
                         getTitlesWidget: (value, meta) {
-                          final DateTime date = firstDate.add(
+                          DateTime date = firstDate.add(
                             Duration(days: value.toInt()),
                           );
-
-                          int totalDays = maxX.toInt();
-                          int intervalDays = (totalDays / 5).ceil();
-
-                          if (intervalDays == 0) intervalDays = 1;
-
-                          if (value == 0 ||
-                              value.toInt() == maxX.toInt() ||
-                              (value % intervalDays == 0 &&
-                                  value != 0 &&
-                                  value.toInt() != maxX.toInt())) {
-                            return SideTitleWidget(
-                              meta: meta,
-                              angle: -0.7,
-                              child: Text(
-                                DateFormat('yy.MM.dd').format(date),
-                                style: const TextStyle(fontSize: 10),
+                          return SideTitleWidget(
+                            meta: meta,
+                            child: Text(
+                              DateFormat('yy.MM').format(date),
+                              style: const TextStyle(
+                                color: Color(0xff68737d),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
                               ),
-                            );
-                          }
-                          return const SizedBox.shrink();
+                            ),
+                          );
                         },
                       ),
                     ),
                     leftTitles: AxisTitles(
+                      axisNameWidget: const Text(
+                        'Gold Price (USD/OZS)',
+                        style: TextStyle(
+                          color: Color(0xFFD4AF37), // Gold 색상과 맞춤
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                      axisNameSize: 25,
                       sideTitles: SideTitles(
                         showTitles: true,
-                        reservedSize: 60,
                         getTitlesWidget: (value, meta) {
-                          // Gold Price (왼쪽 Y축)
-                          return Text(
-                            value.toStringAsFixed(0), // Gold는 소수점 없이 표시
-                            style: const TextStyle(
-                              color: Color(0xFFD4AF37), // Gold 색상
-                              fontSize: 10,
+                          return SideTitleWidget(
+                            space: 8.0,
+                            meta: meta,
+                            child: Text(
+                              value.toStringAsFixed(0),
+                              style: const TextStyle(
+                                color: Color(0xFFD4AF37), // 금 가격 라벨 색상 (금색)
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14, // 글자 크기 조정
+                              ),
+                              textAlign: TextAlign.left,
                             ),
                           );
                         },
-                        interval: chartInterval, // Gold 가격에 맞춰진 interval
+                        reservedSize: 50, // 여유 공간 확보
+                        interval:
+                            (finalMaxGoldY - finalMinGoldY) /
+                            5, // Gold 가격에 맞춰 간격 조정
                       ),
                     ),
                     rightTitles: AxisTitles(
+                      axisNameWidget: const Text(
+                        'Dollar Index',
+                        style: TextStyle(
+                          color: Colors.purple, // Dollar Index 색상과 맞춤
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                      axisNameSize: 25,
                       sideTitles: SideTitles(
                         showTitles: true,
-                        reservedSize: 60,
                         getTitlesWidget: (value, meta) {
-                          // Dollar Index (오른쪽 Y축) - 스케일링된 값을 실제 Dollar Index 값으로 역변환
-                          if (dollarIndexRange > 0 && goldPriceRange > 0) {
-                            // 1. 스케일링된 값을 0-1 범위로 역정규화
-                            double normalizedValue =
-                                (value - minGoldPrice) / goldPriceRange;
-                            // 2. 역정규화된 값을 원래 Dollar Index 범위로 스케일링
-                            double originalDollarIndexValue =
-                                normalizedValue * dollarIndexRange +
-                                minDollarIndex;
-
-                            // interval에 맞는 라벨만 표시
-                            double remainder =
-                                (originalDollarIndexValue - minDollarIndex) %
-                                ((maxDollarIndex - minDollarIndex) /
-                                    4); // 달러 인덱스 원래 범위의 대략적인 간격
-                            if (remainder < 0.1 ||
-                                (((maxDollarIndex - minDollarIndex) / 4) -
-                                        remainder) <
-                                    0.1) {
-                              return Text(
-                                originalDollarIndexValue.toStringAsFixed(
-                                  1,
-                                ), // Dollar Index는 소수점 한 자리로 표시
-                                style: const TextStyle(
-                                  color: Colors.purple, // Dollar Index 색상
-                                  fontSize: 10,
-                                ),
-                              );
-                            }
+                          // 차트의 현재 Y값 (금 스케일)을 달러 인덱스 스케일로 역변환하여 라벨로 표시
+                          double dollarIndexEquivalentValue;
+                          if ((finalMaxGoldY - finalMinGoldY).abs() < 1e-9) {
+                            dollarIndexEquivalentValue = finalMinDollarIndexY;
                           } else {
-                            // 스케일링이 적용되지 않은 경우, Dollar Index 값을 직접 표시
-                            // 이 경우, Y축 스케일링은 Gold에 맞춰져 있으므로 라벨이 이상하게 보일 수 있습니다.
-                            // 대신 Gold 스케일링에 맞춰진 Silver Interval을 사용하거나, 더 나은 처리를 고려해야 합니다.
-                            // 여기서는 간단히 원래 DollarIndexData의 값을 사용하되, 해당 값에 맞는 위치에만 표시
-                            return Text(
-                              value.toStringAsFixed(1), // 원래값을 직접 표시
-                              style: const TextStyle(
-                                color: Colors.purple, // Dollar Index 색상
-                                fontSize: 10,
-                              ),
-                            );
+                            dollarIndexEquivalentValue =
+                                (value - finalMinGoldY) *
+                                    (finalMaxDollarIndexY -
+                                        finalMinDollarIndexY) /
+                                    (finalMaxGoldY - finalMinGoldY) +
+                                finalMinDollarIndexY;
                           }
-                          return const SizedBox.shrink();
+                          return SideTitleWidget(
+                            space: 8.0,
+                            meta: meta,
+                            child: Text(
+                              dollarIndexEquivalentValue.toStringAsFixed(
+                                1,
+                              ), // 소수점 한 자리까지 표시
+                              style: const TextStyle(
+                                color: Colors.purple, // 달러 인덱스 라벨 색상 (자주색)
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14, // 글자 크기 조정
+                              ),
+                              textAlign: TextAlign.right,
+                            ),
+                          );
                         },
+                        reservedSize: 50, // 여유 공간 확보
                         interval:
-                            chartInterval *
-                            (dollarIndexRange / goldPriceRange)
-                                .abs(), // Gold interval 비율에 맞춰 조정
+                            (finalMaxGoldY - finalMinGoldY) /
+                            5, // 기본 차트 Y축 범위에 맞춰 간격 조정
                       ),
                     ),
                   ),
@@ -272,84 +222,67 @@ class GoldDollarIndexChart extends StatelessWidget {
                       width: 1,
                     ),
                   ),
+                  minX: 0,
+                  maxX: maxX,
+                  minY: finalMinGoldY, // 차트의 전체 Y축 범위는 Gold 기준
+                  maxY: finalMaxGoldY, // 차트의 전체 Y축 범위는 Gold 기준
                   lineBarsData: [
                     LineChartBarData(
                       spots: goldSpots,
                       isCurved: true,
-                      color: const Color(0xFFD4AF37), // Gold 색상
+                      color: const Color(0xFFD4AF37), // Gold color
                       barWidth: 2,
                       isStrokeCapRound: true,
                       dotData: const FlDotData(show: false),
                       belowBarData: BarAreaData(show: false),
                     ),
                     LineChartBarData(
-                      spots:
-                          dollarIndexSpotsScaled, // 스케일링된 Dollar Index 데이터 사용
+                      spots: dollarIndexSpots, // 변환된 dollarIndexSpots 사용
                       isCurved: true,
-                      color: Colors.purple, // Dollar Index 색상
+                      color: Colors.purple, // Dollar Index color
                       barWidth: 2,
                       isStrokeCapRound: true,
                       dotData: const FlDotData(show: false),
                       belowBarData: BarAreaData(show: false),
                     ),
                   ],
-                  minX: 0,
-                  maxX: maxX,
-                  minY: chartMinY, // Gold 가격 기준의 Y축 범위
-                  maxY: chartMaxY, // Gold 가격 기준의 Y축 범위
-
                   lineTouchData: LineTouchData(
                     touchTooltipData: LineTouchTooltipData(
-                      getTooltipItems: (touchedSpots) {
-                        return touchedSpots.map((LineBarSpot touchedSpot) {
-                          final DateTime date = firstDate.add(
+                      getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
+                        return touchedBarSpots.map((touchedSpot) {
+                          final color = touchedSpot.bar.color;
+                          DateTime date = firstDate.add(
                             Duration(days: touchedSpot.x.toInt()),
                           );
                           final String dateFormatted = DateFormat(
                             'yyyy-MM-dd',
                           ).format(date);
+                          String label = '';
+                          String priceText = '';
 
-                          String text;
-                          Color color;
-                          if (touchedSpot.barIndex == 0) {
-                            // Gold 라인
-                            text = 'Gold: ${touchedSpot.y.toStringAsFixed(2)}';
-                            color = touchedSpot.bar.color ?? Colors.black;
-                          } else {
-                            // Dollar Index 라인 (스케일링된 값으로부터 원본 값 계산)
-                            double originalDollarIndexValue = 0.0;
-                            if (dollarIndexRange > 0 && goldPriceRange > 0) {
-                              double normalizedValue =
-                                  (touchedSpot.y - minGoldPrice) /
-                                  goldPriceRange;
-                              originalDollarIndexValue =
-                                  normalizedValue * dollarIndexRange +
-                                  minDollarIndex;
-                            } else if (dollarIndexData.isNotEmpty &&
-                                goldData.isNotEmpty) {
-                              // 스케일링이 안된 경우 (goldPriceRange나 dollarIndexRange가 0인 경우)
-                              // 대략적인 역계산을 시도 (첫 값 기준으로 스케일링된 경우)
-                              double averageGoldPrice =
-                                  goldData
-                                      .map((e) => e.price)
-                                      .reduce((a, b) => a + b) /
-                                  goldData.length;
-                              double firstDollarIndexPrice =
-                                  dollarIndexData.first.price;
-                              double scaleFactor =
-                                  averageGoldPrice / firstDollarIndexPrice;
-                              if (scaleFactor != 0) {
-                                originalDollarIndexValue =
-                                    touchedSpot.y / scaleFactor;
-                              }
+                          if (color == const Color(0xFFD4AF37)) {
+                            // Gold는 원래 값 그대로 사용
+                            label = 'Gold';
+                            priceText = touchedSpot.y.toStringAsFixed(0);
+                          } else if (color == Colors.purple) {
+                            // Dollar Index는 터치된 Y값(금 스케일)을 달러 인덱스 스케일로 역변환하여 표시
+                            label = 'Dollar Index';
+                            double originalDollarIndexPrice;
+                            if ((finalMaxGoldY - finalMinGoldY).abs() < 1e-9) {
+                              originalDollarIndexPrice = finalMinDollarIndexY;
+                            } else {
+                              originalDollarIndexPrice =
+                                  (touchedSpot.y - finalMinGoldY) *
+                                      (finalMaxDollarIndexY -
+                                          finalMinDollarIndexY) /
+                                      (finalMaxGoldY - finalMinGoldY) +
+                                  finalMinDollarIndexY;
                             }
-                            text =
-                                'Dollar Index: ${originalDollarIndexValue.toStringAsFixed(2)}';
-                            color = touchedSpot.bar.color ?? Colors.black;
+                            priceText = originalDollarIndexPrice
+                                .toStringAsFixed(1);
                           }
-
                           return LineTooltipItem(
-                            '$dateFormatted\n$text',
+                            '$dateFormatted\n$label: $priceText',
                             TextStyle(
                               color: color,
                               fontWeight: FontWeight.bold,
