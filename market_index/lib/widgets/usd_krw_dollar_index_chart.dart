@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'package:market_index/utils/chart_common.dart';
 import '../models/data_models.dart';
 import 'dart:math';
 
@@ -101,7 +102,7 @@ class UsdKrwDollarIndexChart extends StatelessWidget {
           children: [
             Text(
               'USD/KRW vs Dollar Index',
-              style: Theme.of(context).textTheme.titleLarge,
+              style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 20),
             AspectRatio(
@@ -127,9 +128,9 @@ class UsdKrwDollarIndexChart extends StatelessWidget {
                             child: Text(
                               DateFormat('yy.MM').format(date),
                               style: const TextStyle(
-                                color: Color(0xff68737d),
+                                color: ChartColor.text,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 11,
+                                fontSize: 12,
                               ),
                             ),
                           );
@@ -140,7 +141,7 @@ class UsdKrwDollarIndexChart extends StatelessWidget {
                       axisNameWidget: const Text(
                         'USD/KRW',
                         style: TextStyle(
-                          color: Colors.orange, // USD/KRW 색상과 맞춤
+                          color: ChartColor.usdkrw, // USD/KRW 색상과 맞춤
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
                         ),
@@ -155,7 +156,7 @@ class UsdKrwDollarIndexChart extends StatelessWidget {
                             child: Text(
                               value.toStringAsFixed(0), // 환율은 정수로 표시
                               style: const TextStyle(
-                                color: Colors.orange, // USD/KRW 라벨 색상 (주황색)
+                                color: ChartColor.usdkrw, // USD/KRW 라벨 색상 (주황색)
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14, // 글자 크기 조정
                               ),
@@ -173,7 +174,7 @@ class UsdKrwDollarIndexChart extends StatelessWidget {
                       axisNameWidget: const Text(
                         'Dollar Index',
                         style: TextStyle(
-                          color: Colors.green, // Dollar Index 색상과 맞춤
+                          color: ChartColor.dollarIndex, // Dollar Index 색상과 맞춤
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
                         ),
@@ -203,7 +204,8 @@ class UsdKrwDollarIndexChart extends StatelessWidget {
                                 1,
                               ), // 소수점 한 자리까지 표시
                               style: const TextStyle(
-                                color: Colors.green, // 달러 인덱스 라벨 색상 (초록색)
+                                color: ChartColor
+                                    .dollarIndex, // 달러 인덱스 라벨 색상 (초록색)
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14, // 글자 크기 조정
                               ),
@@ -220,10 +222,7 @@ class UsdKrwDollarIndexChart extends StatelessWidget {
                   ),
                   borderData: FlBorderData(
                     show: true,
-                    border: Border.all(
-                      color: const Color(0xff37434d),
-                      width: 1,
-                    ),
+                    border: Border.all(color: ChartColor.border, width: 1),
                   ),
                   minX: 0,
                   maxX: maxX,
@@ -233,8 +232,8 @@ class UsdKrwDollarIndexChart extends StatelessWidget {
                     LineChartBarData(
                       spots: usdKrwSpots,
                       isCurved: true,
-                      color: Colors.orange, // USD/KRW color
-                      barWidth: 2,
+                      color: ChartColor.usdkrw, // USD/KRW color
+                      barWidth: ChartBar.width,
                       isStrokeCapRound: true,
                       dotData: const FlDotData(show: false),
                       belowBarData: BarAreaData(show: false),
@@ -242,8 +241,8 @@ class UsdKrwDollarIndexChart extends StatelessWidget {
                     LineChartBarData(
                       spots: dollarIndexSpots, // 변환된 dollarIndexSpots 사용
                       isCurved: true,
-                      color: Colors.green, // Dollar Index color
-                      barWidth: 2,
+                      color: ChartColor.dollarIndex, // Dollar Index color
+                      barWidth: ChartBar.width,
                       isStrokeCapRound: true,
                       dotData: const FlDotData(show: false),
                       belowBarData: BarAreaData(show: false),
@@ -263,11 +262,11 @@ class UsdKrwDollarIndexChart extends StatelessWidget {
                           String label = '';
                           String priceText = '';
 
-                          if (color == Colors.orange) {
+                          if (color == ChartColor.usdkrw) {
                             // USD/KRW는 원래 값 그대로 사용
                             label = 'USD/KRW';
                             priceText = touchedSpot.y.toStringAsFixed(0);
-                          } else if (color == Colors.green) {
+                          } else if (color == ChartColor.dollarIndex) {
                             // Dollar Index는 터치된 Y값(USD/KRW 스케일)을 달러 인덱스 스케일로 역변환하여 표시
                             label = 'Dollar Index';
                             double originalDollarIndexPrice;
@@ -309,14 +308,18 @@ class UsdKrwDollarIndexChart extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Container(width: 16, height: 2, color: Colors.orange),
+                      Container(width: 16, height: 2, color: ChartColor.usdkrw),
                       const SizedBox(width: 4),
                       const Text('USD/KRW', style: TextStyle(fontSize: 12)),
                     ],
                   ),
                   Row(
                     children: [
-                      Container(width: 16, height: 2, color: Colors.green),
+                      Container(
+                        width: 16,
+                        height: 2,
+                        color: ChartColor.dollarIndex,
+                      ),
                       const SizedBox(width: 4),
                       const Text(
                         'Dollar Index',
