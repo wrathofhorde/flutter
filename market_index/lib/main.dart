@@ -73,7 +73,7 @@ class _MyHomePageState extends State<MyHomePage> {
     // 앱 바 타이틀 업데이트
     setState(() {
       _appBarTitle =
-          '환율 및 원자재 ${_monthsToShow == 999 ? "모든" : "${_monthsToShow}개월"} 데이터 현황';
+          '환율 및 원자재 ${_monthsToShow == 999 ? "모든" : "$_monthsToShow개월"} 데이터 현황';
     });
 
     double avgUsdKrw = 0.0;
@@ -152,8 +152,12 @@ class _MyHomePageState extends State<MyHomePage> {
     // 금/은 비율 데이터 계산
     List<GoldSilverRatioData> goldSilverRatioList = [];
     final allDates = <DateTime>{};
-    goldList.forEach((data) => allDates.add(data.date));
-    silverList.forEach((data) => allDates.add(data.date));
+    for (var data in goldList) {
+      allDates.add(data.date);
+    }
+    for (var data in silverList) {
+      allDates.add(data.date);
+    }
     final sortedUniqueDates = allDates.toList()..sort((a, b) => a.compareTo(b));
 
     for (var date in sortedUniqueDates) {
