@@ -4,7 +4,6 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../models/data_models.dart';
 import 'dart:math';
-import 'dart:developer' as developer;
 
 class GoldSilverChart extends StatelessWidget {
   final List<GoldData> goldData;
