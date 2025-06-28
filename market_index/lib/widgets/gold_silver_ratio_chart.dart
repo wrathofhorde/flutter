@@ -51,15 +51,8 @@ class GoldSilverRatioChart extends StatelessWidget {
         .inDays
         .toDouble();
 
-    // Y축 interval 계산 (비율 데이터에 맞춰)
-    double ratioInterval = (chartMaxY - chartMinY > 0)
-        ? (chartMaxY - chartMinY) / 4
-        : 1.0;
-    if (ratioInterval < 0.5) {
-      // 비율 특성에 맞춰 최소 간격 조정 (예시)
-      ratioInterval = 0.5;
-    }
-    ratioInterval = (ratioInterval * 2).ceilToDouble() / 2; // 0.5 단위로 반올림
+    // X축 라벨 간격을 동적으로 계산 (대략 6개의 라벨을 목표)
+    final double xAxisInterval = maxX / 5;
 
     return Card(
       elevation: 4,
@@ -78,19 +71,7 @@ class GoldSilverRatioChart extends StatelessWidget {
               aspectRatio: 1.7,
               child: LineChart(
                 LineChartData(
-                  gridData: FlGridData(
-                    show: true,
-                    drawVerticalLine: true,
-                    drawHorizontalLine: true,
-                    getDrawingHorizontalLine: (value) => FlLine(
-                      color: Colors.grey.withAlpha((255 * 0.3).round()),
-                      strokeWidth: 0.5,
-                    ),
-                    getDrawingVerticalLine: (value) => FlLine(
-                      color: Colors.grey.withAlpha((255 * 0.3).round()),
-                      strokeWidth: 0.5,
-                    ),
-                  ),
+                  gridData: const FlGridData(show: false),
                   titlesData: FlTitlesData(
                     show: true,
                     topTitles: const AxisTitles(
@@ -99,53 +80,58 @@ class GoldSilverRatioChart extends StatelessWidget {
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
-                        reservedSize: 40,
+                        interval: xAxisInterval, // 동적으로 계산된 간격 적용
                         getTitlesWidget: (value, meta) {
-                          final DateTime date = firstDate.add(
+                          DateTime date = firstDate.add(
                             Duration(days: value.toInt()),
                           );
-
-                          int totalDays = maxX.toInt();
-                          int intervalDays = (totalDays / 5).ceil();
-
-                          if (intervalDays == 0) intervalDays = 1;
-
-                          if (value == 0 ||
-                              value.toInt() == maxX.toInt() ||
-                              (value % intervalDays == 0 &&
-                                  value != 0 &&
-                                  value.toInt() != maxX.toInt())) {
-                            return SideTitleWidget(
-                              meta: meta,
-                              angle: -0.7,
-                              child: Text(
-                                DateFormat('yy.MM.dd').format(date),
-                                style: const TextStyle(fontSize: 10),
+                          return SideTitleWidget(
+                            meta: meta,
+                            child: Text(
+                              DateFormat('yy.MM').format(date),
+                              style: const TextStyle(
+                                color: Color(0xff68737d),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
                               ),
-                            );
-                          }
-                          return const SizedBox.shrink();
+                            ),
+                          );
                         },
                       ),
                     ),
                     leftTitles: AxisTitles(
+                      axisNameWidget: const Text(
+                        'Ratio',
+                        style: TextStyle(
+                          color: Colors.blue, // 비율 차트의 라인 색상과 맞춤
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                      axisNameSize: 25,
                       sideTitles: SideTitles(
                         showTitles: true,
-                        reservedSize: 60,
                         getTitlesWidget: (value, meta) {
-                          return Text(
-                            value.toStringAsFixed(1), // 비율은 소수점 한 자리로 표시
-                            style: const TextStyle(
-                              color: Colors.blue, // 비율 차트 색상
-                              fontSize: 10,
+                          return SideTitleWidget(
+                            space: 8.0,
+                            meta: meta,
+                            child: Text(
+                              value.toStringAsFixed(1), // 소수점 한 자리까지 표시
+                              style: const TextStyle(
+                                color: Color(0xff67727d), // 일반 텍스트 색상
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14, // 글자 크기 조정
+                              ),
+                              textAlign: TextAlign.left,
                             ),
                           );
                         },
-                        interval: ratioInterval,
+                        reservedSize: 50, // 여유 공간 확보
+                        interval:
+                            (chartMaxY - chartMinY) / 5, // Y축 간격 조정 (5개 라벨)
                       ),
                     ),
                     rightTitles: const AxisTitles(
-                      // 오른쪽 Y축은 표시하지 않습니다.
                       sideTitles: SideTitles(showTitles: false),
                     ),
                   ),
@@ -156,27 +142,26 @@ class GoldSilverRatioChart extends StatelessWidget {
                       width: 1,
                     ),
                   ),
+                  minX: 0,
+                  maxX: maxX,
+                  minY: chartMinY,
+                  maxY: chartMaxY,
                   lineBarsData: [
                     LineChartBarData(
                       spots: spots,
                       isCurved: true,
-                      color: Colors.blue, // 비율 라인 색상
+                      color: Colors.blue, // Line color
                       barWidth: 2,
                       isStrokeCapRound: true,
                       dotData: const FlDotData(show: false),
                       belowBarData: BarAreaData(show: false),
                     ),
                   ],
-                  minX: 0,
-                  maxX: maxX,
-                  minY: chartMinY,
-                  maxY: chartMaxY,
-
                   lineTouchData: LineTouchData(
                     touchTooltipData: LineTouchTooltipData(
-                      getTooltipItems: (touchedSpots) {
-                        return touchedSpots.map((LineBarSpot touchedSpot) {
-                          final DateTime date = firstDate.add(
+                      getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
+                        return touchedBarSpots.map((touchedSpot) {
+                          DateTime date = firstDate.add(
                             Duration(days: touchedSpot.x.toInt()),
                           );
                           final String dateFormatted = DateFormat(
