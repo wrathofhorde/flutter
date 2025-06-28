@@ -1,9 +1,10 @@
+// lib/widgets/gold_silver_chart.dart
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../models/data_models.dart';
 import 'dart:math';
-import 'dart:developer' as developer; // developer.log 사용을 위해 추가
+import 'dart:developer' as developer;
 
 class GoldSilverChart extends StatelessWidget {
   final List<GoldData> goldData;
@@ -23,29 +24,26 @@ class GoldSilverChart extends StatelessWidget {
       return const Center(child: Text('Gold 또는 Silver 데이터를 불러올 수 없습니다.'));
     }
 
-    // 데이터 정렬 (안전을 위해 다시 확인)
     goldData.sort((a, b) => a.date.compareTo(b.date));
     silverData.sort((a, b) => a.date.compareTo(b.date));
 
     final DateTime firstDate = goldData.first.date;
 
+    // Gold 가격 데이터 범위 및 Y축 패딩
     final double minGoldPrice = goldData.map((e) => e.price).reduce(min);
     final double maxGoldPrice = goldData.map((e) => e.price).reduce(max);
+    final double goldPaddingY = (maxGoldPrice - minGoldPrice) * 0.1;
+    final double finalMinGoldY = minGoldPrice - goldPaddingY;
+    final double finalMaxGoldY = maxGoldPrice + goldPaddingY;
+
+    // Silver 가격 데이터 범위 및 Y축 패딩 (라벨링을 위함)
     final double minSilverPrice = silverData.map((e) => e.price).reduce(min);
     final double maxSilverPrice = silverData.map((e) => e.price).reduce(max);
+    final double silverPaddingY = (maxSilverPrice - minSilverPrice) * 0.1;
+    final double finalMinSilverY = minSilverPrice - silverPaddingY;
+    final double finalMaxSilverY = maxSilverPrice + silverPaddingY;
 
-    final double goldRange = maxGoldPrice - minGoldPrice;
-    // 차트의 Y축 범위를 Gold 가격 기준으로 넓게 잡습니다.
-    double chartMinY = minGoldPrice - goldRange * 0.1;
-    double chartMaxY = maxGoldPrice + goldRange * 0.1;
-
-    // Y축 범위가 너무 작아서 문제가 될 경우를 대비하여 최소 범위를 설정합니다.
-    if (chartMaxY - chartMinY < 1.0) {
-      // 최소 1.0의 범위는 확보
-      chartMaxY = chartMinY + 1.0;
-    }
-
-    // Gold Spots: 날짜 차이를 x-값으로 사용
+    // Gold Spots 생성
     final List<FlSpot> goldSpots = goldData
         .map(
           (data) => FlSpot(
@@ -55,63 +53,37 @@ class GoldSilverChart extends StatelessWidget {
         )
         .toList();
 
-    // Silver Spots: Silver 가격을 Gold Y축 범위에 맞게 변환하여 Plot
+    // Silver Spots 생성 - Gold 스케일에 맞춰 변환
     final List<FlSpot> silverSpots = silverData.map((data) {
-      final double originalSilverPrice = data.price;
-      final double silverRelativePosition =
-          (maxSilverPrice - minSilverPrice) != 0
-          ? (originalSilverPrice - minSilverPrice) /
-                (maxSilverPrice - minSilverPrice)
-          : 0.5; // Silver 가격 범위가 0일 경우 중간값으로 처리
-      final double scaledSilverPriceForPlotting =
-          chartMinY + silverRelativePosition * (chartMaxY - chartMinY);
+      final double originalSilverY = data.price;
+      double scaledSilverY;
+
+      // 은 가격 범위가 0인 경우 (모든 가격이 동일) 예외 처리
+      if ((finalMaxSilverY - finalMinSilverY).abs() < 1e-9) {
+        // 거의 0에 가까운 경우
+        scaledSilverY = finalMinGoldY; // 또는 중간 값 등으로 설정
+      } else {
+        // 은 가격을 금 가격의 Y축 범위로 스케일링
+        scaledSilverY =
+            (originalSilverY - finalMinSilverY) *
+                (finalMaxGoldY - finalMinGoldY) /
+                (finalMaxSilverY - finalMinSilverY) +
+            finalMinGoldY;
+      }
       return FlSpot(
         data.date.difference(firstDate).inDays.toDouble(),
-        scaledSilverPriceForPlotting,
+        scaledSilverY,
       );
     }).toList();
 
-    // X축 최대값 (마지막 날짜와 첫 날짜의 차이)
     final double maxX = goldData.last.date
         .difference(firstDate)
         .inDays
         .toDouble();
 
-    // Gold Y축 interval 계산
-    final double goldInterval = (chartMaxY - chartMinY > 0)
-        ? (chartMaxY - chartMinY) / 4
-        : 1.0;
-
-    // --- REVISED silverInterval CALCULATION ---
-    final double silverRange = maxSilverPrice - minSilverPrice;
-    double silverInterval;
-
-    // 은 가격 범위가 매우 작거나 0인 경우를 처리합니다.
-    // 너무 작은 간격으로 라벨이 겹치는 것을 방지하기 위해 최소 간격을 설정합니다.
-    if (silverRange <= 0.01) {
-      // Silver 가격 범위가 거의 없으면 (0.01은 예시 임계값)
-      silverInterval = 0.5; // 고정된 간격 사용 (데이터 특성에 맞게 조정 필요)
-    } else {
-      // 차트의 전체 Y축 높이를 고려하여 은 라벨 간격을 계산합니다.
-      // 라벨의 밀도를 제어하기 위해 전체 차트 Y축 범위에 대한 비율로 계산
-      int idealNumSilverLabels = 5; // 목표하는 은 라벨의 개수
-      silverInterval = silverRange / (idealNumSilverLabels - 1);
-
-      // 계산된 간격이 너무 작으면 최소 간격으로 조정
-      if (silverInterval < 0.2) {
-        // 이전 0.1에서 0.2로 상향 조정
-        silverInterval = 0.2;
-      }
-
-      // 간격을 "보기 좋은" 숫자로 반올림 (예: 0.5 단위)
-      silverInterval = (silverInterval * 2).ceilToDouble() / 2;
-      if (silverInterval == 0) silverInterval = 0.5; // 0이 되는 경우 방지
-    }
-    developer.log(
-      'Calculated silverInterval: $silverInterval (Min: $minSilverPrice, Max: $maxSilverPrice, Range: $silverRange)',
-      name: 'GoldSilverChart',
-    );
-    // --- END REVISED silverInterval CALCULATION ---
+    // X축 라벨 간격을 동적으로 계산 (대략 6개의 라벨을 목표)
+    // maxX를 5로 나누면 (6개의 라벨 = 5개의 간격) 됨.
+    final double xAxisInterval = maxX / 5;
 
     return Card(
       elevation: 4,
@@ -130,19 +102,7 @@ class GoldSilverChart extends StatelessWidget {
               aspectRatio: 1.7,
               child: LineChart(
                 LineChartData(
-                  gridData: FlGridData(
-                    show: true,
-                    drawVerticalLine: true,
-                    drawHorizontalLine: true,
-                    getDrawingHorizontalLine: (value) => FlLine(
-                      color: Colors.grey.withAlpha((255 * 0.3).round()),
-                      strokeWidth: 0.5,
-                    ),
-                    getDrawingVerticalLine: (value) => FlLine(
-                      color: Colors.grey.withAlpha((255 * 0.3).round()),
-                      strokeWidth: 0.5,
-                    ),
-                  ),
+                  gridData: const FlGridData(show: false),
                   titlesData: FlTitlesData(
                     show: true,
                     topTitles: const AxisTitles(
@@ -151,93 +111,105 @@ class GoldSilverChart extends StatelessWidget {
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
-                        reservedSize: 40,
+                        interval: xAxisInterval, // 동적으로 계산된 간격 적용
                         getTitlesWidget: (value, meta) {
-                          final DateTime date = firstDate.add(
+                          DateTime date = firstDate.add(
                             Duration(days: value.toInt()),
                           );
-
-                          int totalDays = maxX.toInt();
-                          int intervalDays = (totalDays / 5).ceil();
-
-                          if (intervalDays == 0) intervalDays = 1;
-
-                          if (value == 0 ||
-                              value.toInt() == maxX.toInt() ||
-                              (value % intervalDays == 0 &&
-                                  value != 0 &&
-                                  value.toInt() != maxX.toInt())) {
-                            return SideTitleWidget(
-                              meta: meta,
-                              angle: -0.7,
-                              child: Text(
-                                DateFormat('yy.MM.dd').format(date),
-                                style: const TextStyle(fontSize: 10),
+                          return SideTitleWidget(
+                            meta: meta,
+                            child: Text(
+                              DateFormat('yy.MM').format(date),
+                              style: const TextStyle(
+                                color: Color(0xff68737d),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
                               ),
-                            );
-                          }
-                          return const SizedBox.shrink();
+                            ),
+                          );
                         },
                       ),
                     ),
                     leftTitles: AxisTitles(
+                      axisNameWidget: const Text(
+                        'Gold Price (USD/OZS)',
+                        style: TextStyle(
+                          color: Color(0xFFD4AF37), // Gold 색상과 맞춤
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12, // 축 이름 폰트 크기
+                        ),
+                      ),
+                      axisNameSize: 25, // 축 이름 공간
                       sideTitles: SideTitles(
                         showTitles: true,
-                        reservedSize: 60,
                         getTitlesWidget: (value, meta) {
-                          return Text(
-                            value.toStringAsFixed(0),
-                            style: const TextStyle(
-                              color: Color(0xFFD4AF37),
-                              fontSize: 10,
+                          return SideTitleWidget(
+                            space: 8.0,
+                            meta: meta,
+                            child: Text(
+                              value.toStringAsFixed(0), // 금 가격은 정수로 표시
+                              style: const TextStyle(
+                                // 여기가 금색으로 변경됩니다.
+                                color: Color(0xFFD4AF37), // Gold Price 라벨 색상
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                              textAlign: TextAlign.left,
                             ),
                           );
                         },
-                        interval: goldInterval,
+                        reservedSize: 50,
+                        interval:
+                            (finalMaxGoldY - finalMinGoldY) /
+                            5, // Gold 가격에 맞춰 간격 조정
                       ),
                     ),
                     rightTitles: AxisTitles(
+                      // 오른쪽 Y축
+                      axisNameWidget: const Text(
+                        'Silver Price (USD/OZS)',
+                        style: TextStyle(
+                          color: Colors.blueGrey, // Silver 색상과 맞춤
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                      axisNameSize: 25, // 축 이름 공간
                       sideTitles: SideTitles(
                         showTitles: true,
-                        reservedSize: 60,
                         getTitlesWidget: (value, meta) {
-                          // Y축 값(value)을 원래 Silver 가격 범위로 역변환
-                          final double chartRelativePosition =
-                              (value - chartMinY) / (chartMaxY - chartMinY);
-                          double originalSilverValue =
-                              minSilverPrice +
-                              chartRelativePosition *
-                                  (maxSilverPrice - minSilverPrice);
-
-                          // NaN, Infinity 또는 유효하지 않은 범위의 값에 대한 처리 강화
-                          if (!originalSilverValue.isFinite ||
-                              originalSilverValue <
-                                  minSilverPrice -
-                                      0.1 || // Silver 최소 가격보다 너무 작으면 표시 안 함
-                              originalSilverValue > maxSilverPrice + 0.1) {
-                            // Silver 최대 가격보다 너무 크면 표시 안 함
-                            return const SizedBox.shrink();
+                          // 차트의 현재 Y값 (금 스케일)을 은 스케일로 역변환하여 라벨로 표시
+                          double silverEquivalentValue;
+                          if ((finalMaxGoldY - finalMinGoldY).abs() < 1e-9) {
+                            // 금 가격 범위가 0인 경우
+                            silverEquivalentValue = finalMinSilverY;
+                          } else {
+                            silverEquivalentValue =
+                                (value - finalMinGoldY) *
+                                    (finalMaxSilverY - finalMinSilverY) /
+                                    (finalMaxGoldY - finalMinGoldY) +
+                                finalMinSilverY;
                           }
-
-                          // 이 부분이 핵심: interval에 맞는 라벨만 표시하여 겹침 방지
-                          // originalSilverValue가 silverInterval의 배수에 '가깝게' 일치하는 경우에만 라벨을 표시합니다.
-                          double remainder =
-                              (originalSilverValue - minSilverPrice) %
-                              silverInterval;
-                          if (remainder < 0.01 ||
-                              (silverInterval - remainder) < 0.01) {
-                            // 오차 범위 0.01 허용
-                            return Text(
-                              originalSilverValue.toStringAsFixed(2),
+                          return SideTitleWidget(
+                            space: 8.0,
+                            meta: meta,
+                            child: Text(
+                              silverEquivalentValue.toStringAsFixed(
+                                1,
+                              ), // 소수점 한 자리까지 표시
                               style: const TextStyle(
-                                color: Color(0xFFA9A9A9),
-                                fontSize: 10,
+                                color: Color(0xff67727d), // Silver Price 라벨 색상
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
                               ),
-                            );
-                          }
-                          return const SizedBox.shrink(); // 조건을 만족하지 않으면 표시하지 않음
+                              textAlign: TextAlign.right, // 오른쪽 정렬
+                            ),
+                          );
                         },
-                        interval: silverInterval, // 개선된 silverInterval 사용
+                        reservedSize: 50, // 오른쪽 마진 증가
+                        // 오른쪽 축의 interval도 기본 차트의 Y축 범위에 맞춰야 합니다.
+                        // 이 값은 getTitlesWidget 내부의 변환과는 별개로 축의 라벨 간격을 결정합니다.
+                        interval: (finalMaxGoldY - finalMinGoldY) / 5,
                       ),
                     ),
                   ),
@@ -248,64 +220,65 @@ class GoldSilverChart extends StatelessWidget {
                       width: 1,
                     ),
                   ),
+                  minX: 0,
+                  maxX: maxX,
+                  minY: finalMinGoldY, // 차트의 전체 Y축 범위는 Gold 기준
+                  maxY: finalMaxGoldY, // 차트의 전체 Y축 범위는 Gold 기준
                   lineBarsData: [
                     LineChartBarData(
                       spots: goldSpots,
                       isCurved: true,
-                      color: const Color(0xFFD4AF37),
+                      color: const Color(0xFFD4AF37), // Gold color
                       barWidth: 2,
                       isStrokeCapRound: true,
                       dotData: const FlDotData(show: false),
                       belowBarData: BarAreaData(show: false),
                     ),
                     LineChartBarData(
-                      spots: silverSpots,
+                      spots: silverSpots, // 변환된 silverSpots 사용
                       isCurved: true,
-                      color: const Color(0xFFA9A9A9),
+                      color: Colors.blueGrey, // Silver color
                       barWidth: 2,
                       isStrokeCapRound: true,
                       dotData: const FlDotData(show: false),
                       belowBarData: BarAreaData(show: false),
                     ),
                   ],
-                  minX: 0,
-                  maxX: maxX,
-                  minY: chartMinY,
-                  maxY: chartMaxY,
-
                   lineTouchData: LineTouchData(
                     touchTooltipData: LineTouchTooltipData(
-                      getTooltipItems: (touchedSpots) {
-                        return touchedSpots.map((LineBarSpot touchedSpot) {
-                          final DateTime date = firstDate.add(
+                      getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
+                        return touchedBarSpots.map((touchedSpot) {
+                          final color = touchedSpot.bar.color;
+                          DateTime date = firstDate.add(
                             Duration(days: touchedSpot.x.toInt()),
                           );
                           final String dateFormatted = DateFormat(
                             'yyyy-MM-dd',
                           ).format(date);
+                          String label = '';
+                          String priceText = '';
 
-                          String text;
-                          Color color;
-                          if (touchedSpot.barIndex == 0) {
-                            // Gold 라인
-                            text = 'Gold: ${touchedSpot.y.toStringAsFixed(2)}';
-                            color = touchedSpot.bar.color ?? Colors.black;
-                          } else {
-                            // Silver 라인
-                            final double chartRelativePosition =
-                                (touchedSpot.y - chartMinY) /
-                                (chartMaxY - chartMinY);
-                            final double originalSilverPrice =
-                                minSilverPrice +
-                                chartRelativePosition *
-                                    (maxSilverPrice - minSilverPrice);
-                            text =
-                                'Silver: ${originalSilverPrice.toStringAsFixed(2)}';
-                            color = touchedSpot.bar.color ?? Colors.black;
+                          if (color == const Color(0xFFD4AF37)) {
+                            // Gold는 원래 값 그대로 사용
+                            label = 'Gold';
+                            priceText = touchedSpot.y.toStringAsFixed(0);
+                          } else if (color == Colors.blueGrey) {
+                            // Silver는 터치된 Y값(금 스케일)을 은 스케일로 역변환하여 표시
+                            label = 'Silver';
+                            double originalSilverPrice;
+                            if ((finalMaxGoldY - finalMinGoldY).abs() < 1e-9) {
+                              originalSilverPrice = finalMinSilverY;
+                            } else {
+                              originalSilverPrice =
+                                  (touchedSpot.y - finalMinGoldY) *
+                                      (finalMaxSilverY - finalMinSilverY) /
+                                      (finalMaxGoldY - finalMinGoldY) +
+                                  finalMinSilverY;
+                            }
+                            priceText = originalSilverPrice.toStringAsFixed(2);
                           }
-
                           return LineTooltipItem(
-                            '$dateFormatted\n$text',
+                            '$dateFormatted\n$label: $priceText',
                             TextStyle(
                               color: color,
                               fontWeight: FontWeight.bold,
@@ -321,6 +294,7 @@ class GoldSilverChart extends StatelessWidget {
                 ),
               ),
             ),
+            // 범례
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
               child: Row(
@@ -334,22 +308,15 @@ class GoldSilverChart extends StatelessWidget {
                         color: const Color(0xFFD4AF37),
                       ),
                       const SizedBox(width: 4),
-                      const Text(
-                        'Gold Price (USD/OZS)',
-                        style: TextStyle(fontSize: 12),
-                      ),
+                      const Text('Gold Price', style: TextStyle(fontSize: 12)),
                     ],
                   ),
                   Row(
                     children: [
-                      Container(
-                        width: 16,
-                        height: 2,
-                        color: const Color(0xFFA9A9A9),
-                      ),
+                      Container(width: 16, height: 2, color: Colors.blueGrey),
                       const SizedBox(width: 4),
                       const Text(
-                        'Silver Price (USD/OZS)',
+                        'Silver Price',
                         style: TextStyle(fontSize: 12),
                       ),
                     ],
