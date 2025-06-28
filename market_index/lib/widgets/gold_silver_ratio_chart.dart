@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'package:market_index/utils/chart_common.dart';
 import '../models/data_models.dart';
 import 'dart:math';
 
@@ -64,7 +65,7 @@ class GoldSilverRatioChart extends StatelessWidget {
           children: [
             Text(
               'Gold/Silver Ratio',
-              style: Theme.of(context).textTheme.titleLarge,
+              style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 20),
             AspectRatio(
@@ -90,9 +91,9 @@ class GoldSilverRatioChart extends StatelessWidget {
                             child: Text(
                               DateFormat('yy.MM').format(date),
                               style: const TextStyle(
-                                color: Color(0xff68737d),
+                                color: ChartColor.text,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 11,
+                                fontSize: 12,
                               ),
                             ),
                           );
@@ -103,9 +104,9 @@ class GoldSilverRatioChart extends StatelessWidget {
                       axisNameWidget: const Text(
                         'Ratio',
                         style: TextStyle(
-                          color: Colors.blue, // 비율 차트의 라인 색상과 맞춤
+                          color: ChartColor.goldSilverRatio, // 비율 차트의 라인 색상과 맞춤
                           fontWeight: FontWeight.bold,
-                          fontSize: 12,
+                          fontSize: 14,
                         ),
                       ),
                       axisNameSize: 25,
@@ -118,7 +119,7 @@ class GoldSilverRatioChart extends StatelessWidget {
                             child: Text(
                               value.toStringAsFixed(1), // 소수점 한 자리까지 표시
                               style: const TextStyle(
-                                color: Color(0xff67727d), // 일반 텍스트 색상
+                                color: ChartColor.text, // 일반 텍스트 색상
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14, // 글자 크기 조정
                               ),
@@ -137,10 +138,7 @@ class GoldSilverRatioChart extends StatelessWidget {
                   ),
                   borderData: FlBorderData(
                     show: true,
-                    border: Border.all(
-                      color: const Color(0xff37434d),
-                      width: 1,
-                    ),
+                    border: Border.all(color: ChartColor.border, width: 1),
                   ),
                   minX: 0,
                   maxX: maxX,
@@ -150,8 +148,8 @@ class GoldSilverRatioChart extends StatelessWidget {
                     LineChartBarData(
                       spots: spots,
                       isCurved: true,
-                      color: Colors.blue, // Line color
-                      barWidth: 2,
+                      color: ChartColor.goldSilverRatio, // Line color
+                      barWidth: ChartBar.width,
                       isStrokeCapRound: true,
                       dotData: const FlDotData(show: false),
                       belowBarData: BarAreaData(show: false),
@@ -171,7 +169,7 @@ class GoldSilverRatioChart extends StatelessWidget {
                           return LineTooltipItem(
                             '$dateFormatted\n비율: ${touchedSpot.y.toStringAsFixed(2)}',
                             const TextStyle(
-                              color: Colors.blue,
+                              color: ChartColor.goldSilverRatio,
                               fontWeight: FontWeight.bold,
                             ),
                           );
@@ -190,7 +188,11 @@ class GoldSilverRatioChart extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center, // 가운데 정렬
                 children: [
-                  Container(width: 16, height: 2, color: Colors.blue),
+                  Container(
+                    width: 16,
+                    height: 2,
+                    color: ChartColor.goldSilverRatio,
+                  ),
                   const SizedBox(width: 4),
                   const Text(
                     'Gold/Silver Ratio',

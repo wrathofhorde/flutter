@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'package:market_index/utils/chart_common.dart';
 import '../models/data_models.dart';
 import 'dart:math';
 
@@ -98,7 +99,7 @@ class GoldDollarIndexChart extends StatelessWidget {
           children: [
             Text(
               'Gold vs Dollar Index',
-              style: Theme.of(context).textTheme.titleLarge,
+              style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 20),
             AspectRatio(
@@ -124,9 +125,9 @@ class GoldDollarIndexChart extends StatelessWidget {
                             child: Text(
                               DateFormat('yy.MM').format(date),
                               style: const TextStyle(
-                                color: Color(0xff68737d),
+                                color: ChartColor.text,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 11,
+                                fontSize: 12,
                               ),
                             ),
                           );
@@ -137,7 +138,7 @@ class GoldDollarIndexChart extends StatelessWidget {
                       axisNameWidget: const Text(
                         'Gold Price (USD/OZS)',
                         style: TextStyle(
-                          color: Color(0xFFD4AF37), // Gold 색상과 맞춤
+                          color: ChartColor.gold, // Gold 색상과 맞춤
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
                         ),
@@ -152,7 +153,7 @@ class GoldDollarIndexChart extends StatelessWidget {
                             child: Text(
                               value.toStringAsFixed(0),
                               style: const TextStyle(
-                                color: Color(0xFFD4AF37), // 금 가격 라벨 색상 (금색)
+                                color: ChartColor.gold, // 금 가격 라벨 색상 (금색)
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14, // 글자 크기 조정
                               ),
@@ -170,7 +171,7 @@ class GoldDollarIndexChart extends StatelessWidget {
                       axisNameWidget: const Text(
                         'Dollar Index',
                         style: TextStyle(
-                          color: Colors.purple, // Dollar Index 색상과 맞춤
+                          color: ChartColor.dollarIndex, // Dollar Index 색상과 맞춤
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
                         ),
@@ -199,7 +200,8 @@ class GoldDollarIndexChart extends StatelessWidget {
                                 1,
                               ), // 소수점 한 자리까지 표시
                               style: const TextStyle(
-                                color: Colors.purple, // 달러 인덱스 라벨 색상 (자주색)
+                                color: ChartColor
+                                    .dollarIndex, // 달러 인덱스 라벨 색상 (자주색)
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14, // 글자 크기 조정
                               ),
@@ -216,10 +218,7 @@ class GoldDollarIndexChart extends StatelessWidget {
                   ),
                   borderData: FlBorderData(
                     show: true,
-                    border: Border.all(
-                      color: const Color(0xff37434d),
-                      width: 1,
-                    ),
+                    border: Border.all(color: ChartColor.border, width: 1),
                   ),
                   minX: 0,
                   maxX: maxX,
@@ -229,8 +228,8 @@ class GoldDollarIndexChart extends StatelessWidget {
                     LineChartBarData(
                       spots: goldSpots,
                       isCurved: true,
-                      color: const Color(0xFFD4AF37), // Gold color
-                      barWidth: 2,
+                      color: ChartColor.gold, // Gold color
+                      barWidth: ChartBar.width,
                       isStrokeCapRound: true,
                       dotData: const FlDotData(show: false),
                       belowBarData: BarAreaData(show: false),
@@ -238,8 +237,8 @@ class GoldDollarIndexChart extends StatelessWidget {
                     LineChartBarData(
                       spots: dollarIndexSpots, // 변환된 dollarIndexSpots 사용
                       isCurved: true,
-                      color: Colors.purple, // Dollar Index color
-                      barWidth: 2,
+                      color: ChartColor.dollarIndex,
+                      barWidth: ChartBar.width,
                       isStrokeCapRound: true,
                       dotData: const FlDotData(show: false),
                       belowBarData: BarAreaData(show: false),
@@ -259,11 +258,11 @@ class GoldDollarIndexChart extends StatelessWidget {
                           String label = '';
                           String priceText = '';
 
-                          if (color == const Color(0xFFD4AF37)) {
+                          if (color == ChartColor.gold) {
                             // Gold는 원래 값 그대로 사용
                             label = 'Gold';
                             priceText = touchedSpot.y.toStringAsFixed(0);
-                          } else if (color == Colors.purple) {
+                          } else if (color == ChartColor.dollarIndex) {
                             // Dollar Index는 터치된 Y값(금 스케일)을 달러 인덱스 스케일로 역변환하여 표시
                             label = 'Dollar Index';
                             double originalDollarIndexPrice;
@@ -304,11 +303,7 @@ class GoldDollarIndexChart extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Container(
-                        width: 16,
-                        height: 2,
-                        color: const Color(0xFFD4AF37),
-                      ),
+                      Container(width: 16, height: 2, color: ChartColor.gold),
                       const SizedBox(width: 4),
                       const Text(
                         'Gold Price (USD/OZS)',
@@ -318,7 +313,11 @@ class GoldDollarIndexChart extends StatelessWidget {
                   ),
                   Row(
                     children: [
-                      Container(width: 16, height: 2, color: Colors.purple),
+                      Container(
+                        width: 16,
+                        height: 2,
+                        color: ChartColor.dollarIndex,
+                      ),
                       const SizedBox(width: 4),
                       const Text(
                         'Dollar Index',

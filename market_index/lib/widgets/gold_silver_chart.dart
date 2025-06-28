@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'package:market_index/utils/chart_common.dart';
 import '../models/data_models.dart';
 import 'dart:math';
 
@@ -94,7 +95,7 @@ class GoldSilverChart extends StatelessWidget {
           children: [
             Text(
               'Gold vs Silver Prices',
-              style: Theme.of(context).textTheme.titleLarge,
+              style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 20),
             AspectRatio(
@@ -120,9 +121,9 @@ class GoldSilverChart extends StatelessWidget {
                             child: Text(
                               DateFormat('yy.MM').format(date),
                               style: const TextStyle(
-                                color: Color(0xff68737d),
+                                color: ChartColor.text,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 11,
+                                fontSize: 12,
                               ),
                             ),
                           );
@@ -133,7 +134,7 @@ class GoldSilverChart extends StatelessWidget {
                       axisNameWidget: const Text(
                         'Gold Price (USD/OZS)',
                         style: TextStyle(
-                          color: Color(0xFFD4AF37), // Gold 색상과 맞춤
+                          color: ChartColor.gold, // Gold 색상과 맞춤
                           fontWeight: FontWeight.bold,
                           fontSize: 12, // 축 이름 폰트 크기
                         ),
@@ -149,7 +150,7 @@ class GoldSilverChart extends StatelessWidget {
                               value.toStringAsFixed(0), // 금 가격은 정수로 표시
                               style: const TextStyle(
                                 // 여기가 금색으로 변경됩니다.
-                                color: Color(0xFFD4AF37), // Gold Price 라벨 색상
+                                color: ChartColor.gold, // Gold Price 라벨 색상
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
                               ),
@@ -168,7 +169,7 @@ class GoldSilverChart extends StatelessWidget {
                       axisNameWidget: const Text(
                         'Silver Price (USD/OZS)',
                         style: TextStyle(
-                          color: Colors.blueGrey, // Silver 색상과 맞춤
+                          color: ChartColor.silver, // Silver 색상과 맞춤
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
                         ),
@@ -197,7 +198,7 @@ class GoldSilverChart extends StatelessWidget {
                                 1,
                               ), // 소수점 한 자리까지 표시
                               style: const TextStyle(
-                                color: Color(0xff67727d), // Silver Price 라벨 색상
+                                color: ChartColor.silver, // Silver Price 라벨 색상
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
                               ),
@@ -214,10 +215,7 @@ class GoldSilverChart extends StatelessWidget {
                   ),
                   borderData: FlBorderData(
                     show: true,
-                    border: Border.all(
-                      color: const Color(0xff37434d),
-                      width: 1,
-                    ),
+                    border: Border.all(color: ChartColor.border, width: 1),
                   ),
                   minX: 0,
                   maxX: maxX,
@@ -227,8 +225,8 @@ class GoldSilverChart extends StatelessWidget {
                     LineChartBarData(
                       spots: goldSpots,
                       isCurved: true,
-                      color: const Color(0xFFD4AF37), // Gold color
-                      barWidth: 2,
+                      color: ChartColor.gold, // Gold color
+                      barWidth: ChartBar.width,
                       isStrokeCapRound: true,
                       dotData: const FlDotData(show: false),
                       belowBarData: BarAreaData(show: false),
@@ -236,8 +234,8 @@ class GoldSilverChart extends StatelessWidget {
                     LineChartBarData(
                       spots: silverSpots, // 변환된 silverSpots 사용
                       isCurved: true,
-                      color: Colors.blueGrey, // Silver color
-                      barWidth: 2,
+                      color: ChartColor.silver, // Silver color
+                      barWidth: ChartBar.width,
                       isStrokeCapRound: true,
                       dotData: const FlDotData(show: false),
                       belowBarData: BarAreaData(show: false),
@@ -257,11 +255,11 @@ class GoldSilverChart extends StatelessWidget {
                           String label = '';
                           String priceText = '';
 
-                          if (color == const Color(0xFFD4AF37)) {
+                          if (color == ChartColor.gold) {
                             // Gold는 원래 값 그대로 사용
                             label = 'Gold';
                             priceText = touchedSpot.y.toStringAsFixed(0);
-                          } else if (color == Colors.blueGrey) {
+                          } else if (color == ChartColor.silver) {
                             // Silver는 터치된 Y값(금 스케일)을 은 스케일로 역변환하여 표시
                             label = 'Silver';
                             double originalSilverPrice;
@@ -301,18 +299,14 @@ class GoldSilverChart extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Container(
-                        width: 16,
-                        height: 2,
-                        color: const Color(0xFFD4AF37),
-                      ),
+                      Container(width: 16, height: 2, color: ChartColor.gold),
                       const SizedBox(width: 4),
                       const Text('Gold Price', style: TextStyle(fontSize: 12)),
                     ],
                   ),
                   Row(
                     children: [
-                      Container(width: 16, height: 2, color: Colors.blueGrey),
+                      Container(width: 16, height: 2, color: ChartColor.silver),
                       const SizedBox(width: 4),
                       const Text(
                         'Silver Price',
