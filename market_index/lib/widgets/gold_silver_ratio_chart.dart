@@ -156,6 +156,32 @@ class GoldSilverRatioChart extends StatelessWidget {
                     ),
                   ],
                   lineTouchData: LineTouchData(
+                    // touchSpotDotData 대신 getTouchedSpotIndicator 사용
+                    getTouchedSpotIndicator:
+                        (LineChartBarData barData, List<int> spotIndexes) {
+                          final color = barData.color; // 해당 라인의 색상을 가져옵니다.
+
+                          return spotIndexes.map((int index) {
+                            final flLine = FlLine(
+                              color: color, // 라인 색상도 해당 라인 색상으로
+                              strokeWidth: 1.2,
+                              dashArray: [5, 5],
+                            );
+                            final dotData = FlDotData(
+                              show: true,
+                              getDotPainter: (spot, percent, barData, index) {
+                                final color = barData.color;
+                                return FlDotCirclePainter(
+                                  radius: 6, // 점의 반지름을 4로 설정 (원하는 크기로 조절)
+                                  color: color!, // 점 색상도 해당 라인 색상으로
+                                  strokeWidth: 1,
+                                  strokeColor: Colors.white,
+                                );
+                              },
+                            );
+                            return TouchedSpotIndicatorData(flLine, dotData);
+                          }).toList();
+                        },
                     touchTooltipData: LineTouchTooltipData(
                       getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
                         return touchedBarSpots.map((touchedSpot) {

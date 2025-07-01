@@ -8,6 +8,7 @@ class ChartColor {
   static const dollarIndex = Color.fromRGBO(6, 80, 42, 1);
   static const goldSilverRatio = Color.fromARGB(255, 107, 180, 241);
   static const usdkrw = Color.fromARGB(255, 233, 131, 75);
+  static const tooltipColor = Color.fromARGB(196, 234, 229, 229);
 }
 
 class ChartBar {
