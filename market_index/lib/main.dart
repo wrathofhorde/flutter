@@ -413,8 +413,8 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget _buildMetricsTable(Map<String, dynamic> metrics) {
     final List<String> labels = [
       'USD/KRW 평균',
-      '금 가격 평균 (USD/OZS)',
-      '은 가격 평균 (USD/OZS)',
+      '금 가격 평균\n(USD/OZS)',
+      '은 가격 평균\n(USD/OZS)',
       '달러 인덱스 평균',
       '금/은 비율 평균',
     ];
