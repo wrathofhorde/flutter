@@ -183,6 +183,7 @@ class GoldSilverRatioChart extends StatelessWidget {
                           }).toList();
                         },
                     touchTooltipData: LineTouchTooltipData(
+                      getTooltipColor: (touchedSpot) => ChartColor.tooltipColor,
                       getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
                         return touchedBarSpots.map((touchedSpot) {
                           DateTime date = firstDate.add(
