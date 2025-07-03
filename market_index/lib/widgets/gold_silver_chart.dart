@@ -269,6 +269,7 @@ class GoldSilverChart extends StatelessWidget {
                           }).toList();
                         },
                     touchTooltipData: LineTouchTooltipData(
+                      getTooltipColor: (touchedSpot) => ChartColor.tooltipColor,
                       getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
                         return touchedBarSpots.map((touchedSpot) {
                           final color = touchedSpot.bar.color;
