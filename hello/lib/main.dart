@@ -13,10 +13,11 @@ Future<void> main() async {
   // runApp() 이전에 비동기 작업을 수행할 때 필수
   WidgetsFlutterBinding.ensureInitialized();
 
-  final String dbname = "market.sq3";
+  // /Users/wrath/Library/Containers/com.example.hello/Data/bexu.sq3
+  final String dbname = "bexu.sq3";
   final String tablename = "major_coins";
   try {
-    const windowSize = Size(760, 1000);
+    const windowSize = Size(850, 1000);
     await windowManager.ensureInitialized();
 
     WindowOptions windowOptions = const WindowOptions(
