@@ -71,7 +71,7 @@ class _GraphPageState extends State<GraphPage> {
         debugPrint(price.toString());
       }
     } catch (e) {
-      debugPrint('데이터 불러오기 중 오류 발생: $e');
+      debugPrint('[_fetchAndDisplayPrices]데이터 불러오기 중 오류 발생: $e');
       setState(() {
         _dailyCoinData = [];
         _yearAggregatedData = null;
@@ -103,12 +103,13 @@ class _GraphPageState extends State<GraphPage> {
     // 2. CSV 데이터 준비
     List<List<dynamic>> csvData = [];
     // 헤더 추가
-    csvData.add(['Date', 'BTC', 'ETH', 'XRP']);
+    csvData.add(['Date', 'BTC', 'ETH', 'XRP', 'USDT']);
     // 평균가 추가
     final avgBtc = _yearAggregatedData?['btc']['avg'];
     final avgEth = _yearAggregatedData?['eth']['avg'];
     final avgXrp = _yearAggregatedData?['xrp']['avg'];
-    csvData.add(["Average", avgBtc, avgEth, avgXrp]);
+    final avgUsdt = _yearAggregatedData?['usdt']['avg'];
+    csvData.add(["Average", avgBtc, avgEth, avgXrp, avgUsdt]);
     // 데이터 추가
     for (var data in _dailyCoinData) {
       csvData.add(data.toList());
@@ -171,6 +172,15 @@ class _GraphPageState extends State<GraphPage> {
       int index = entry.key;
       CoinData data = entry.value;
       return FlSpot(index.toDouble(), data.xrp.toDouble());
+    }).toList();
+  }
+
+  // USDT 그래프 데이터를 FlSpot 리스트로 변환하는 함수
+  List<FlSpot> _getUsdtSpots() {
+    return _dailyCoinData.asMap().entries.map((entry) {
+      int index = entry.key;
+      CoinData data = entry.value;
+      return FlSpot(index.toDouble(), data.usdt.toDouble());
     }).toList();
   }
 
@@ -272,6 +282,13 @@ class _GraphPageState extends State<GraphPage> {
                   coinName: 'XRP',
                   spots: _getXrpSpots(),
                   lineColor: Colors.green, // XRP 그래프 색상 지정
+                  fullCoinData: _dailyCoinData,
+                ),
+                // XRP 그래프 - CoinLineChart 위젯 사용
+                CoinLineChart(
+                  coinName: 'USDT',
+                  spots: _getUsdtSpots(),
+                  lineColor: Colors.purple, // USDT 그래프 색상 지정
                   fullCoinData: _dailyCoinData,
                 ),
                 const SizedBox(height: 10),

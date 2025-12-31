@@ -7,6 +7,7 @@ class CoinPriceDb {
   final _columnBtc = "btc";
   final _columnEth = "eth";
   final _columnXrp = "xrp";
+  final _columnUsdt = "usdt";
   final _columnDate = "date";
   final String _tableName;
   final DatabaseHelper _dbHelper;
@@ -23,7 +24,8 @@ class CoinPriceDb {
             $_columnDate TEXT UNIQUE,
             $_columnBtc INTEGER,
             $_columnEth INTEGER,
-            $_columnXrp INTEGER
+            $_columnXrp INTEGER,
+            $_columnUsdt INTEGER
           );
         ''';
     debugPrint(sql);
@@ -35,15 +37,16 @@ class CoinPriceDb {
     required int btc,
     required int eth,
     required int xrp,
+    required double usdt,
   }) async {
     final sql =
         '''
           INSERT OR IGNORE INTO $_tableName 
-          ($_columnDate, $_columnBtc, $_columnEth, $_columnXrp) 
-          VALUES (?, ?, ?, ?);
+          ($_columnDate, $_columnBtc, $_columnEth, $_columnXrp, $_columnUsdt) 
+          VALUES (?, ?, ?, ?, ?);
         ''';
     debugPrint(sql);
-    await _dbHelper.execute(sql, [date, btc, eth, xrp]);
+    await _dbHelper.execute(sql, [date, btc, eth, xrp, usdt]);
   }
 
   Future<void> bulkInsertMajorCoinPrices({
@@ -52,8 +55,8 @@ class CoinPriceDb {
     final sql =
         '''
       INSERT OR IGNORE INTO $_tableName
-      ($_columnDate, $_columnBtc, $_columnEth, $_columnXrp)
-      VALUES (?, ?, ?, ?);
+      ($_columnDate, $_columnBtc, $_columnEth, $_columnXrp, $_columnUsdt)
+      VALUES (?, ?, ?, ?, ?);
       ''';
     debugPrint(sql);
     await _dbHelper.executeMany(sql, params);
@@ -63,7 +66,7 @@ class CoinPriceDb {
   Future<List<CoinData>> getAllCoinData() async {
     final sql =
         '''
-          SELECT $_columnDate, $_columnBtc, $_columnEth, $_columnXrp 
+          SELECT $_columnDate, $_columnBtc, $_columnEth, $_columnXrp, $_columnUsdt 
           FROM $_tableName 
           ORDER BY date DESC;
         ''';
@@ -82,7 +85,7 @@ class CoinPriceDb {
   }) async {
     final sql =
         '''
-          SELECT $_columnDate, $_columnBtc, $_columnEth, $_columnXrp 
+          SELECT $_columnDate, $_columnBtc, $_columnEth, $_columnXrp, $_columnUsdt
           FROM $_tableName
           WHERE $_columnDate BETWEEN ? AND ? 
           ORDER BY $_columnDate ASC;
@@ -101,7 +104,7 @@ class CoinPriceDb {
   Future<CoinData?> getCoinDataByDate(String date) async {
     final sql =
         '''
-          SELECT $_columnDate, $_columnBtc, $_columnEth, $_columnXrp 
+          SELECT $_columnDate, $_columnBtc, $_columnEth, $_columnXrp, $_columnUsdt
           FROM $_tableName
           WHERE $_columnDate = ?;
         ''';
@@ -138,7 +141,8 @@ class CoinPriceDb {
         SELECT
             AVG($_columnBtc) AS avg_btc, MAX($_columnBtc) AS max_btc, MIN($_columnBtc) AS min_btc,
             AVG($_columnEth) AS avg_eth, MAX($_columnEth) AS max_eth, MIN($_columnEth) AS min_eth,
-            AVG($_columnXrp) AS avg_xrp, MAX($_columnXrp) AS max_xrp, MIN($_columnXrp) AS min_xrp
+            AVG($_columnXrp) AS avg_xrp, MAX($_columnXrp) AS max_xrp, MIN($_columnXrp) AS min_xrp,
+            AVG($_columnUsdt) AS avg_usdt, MAX($_columnUsdt) AS max_usdt, MIN($_columnUsdt) AS min_usdt
         FROM $_tableName
         WHERE $_columnDate BETWEEN ? AND ?;
         '''; // ORDER BY는 단일 결과에는 필요 없음
@@ -161,12 +165,19 @@ class CoinPriceDb {
           'max': (result['max_xrp'] as int?) ?? 0,
           'min': (result['min_xrp'] as int?) ?? 0,
         },
+        'usdt': {
+          'avg': (result['avg_usdt'].round() as int?) ?? 0,
+          'max': (result['max_usdt'] as int?) ?? 0,
+          'min': (result['min_usdt'] as int?) ?? 0,
+        },
       };
     }
+
     return {
       'btc': {'avg': 0, 'max': 0, 'min': 0},
       'eth': {'avg': 0, 'max': 0, 'min': 0},
       'xrp': {'avg': 0, 'max': 0, 'min': 0},
+      'usdt': {'avg': 0, 'max': 0, 'min': 0},
     };
   }
 }

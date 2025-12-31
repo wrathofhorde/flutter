@@ -2,6 +2,7 @@ import 'dart:developer';
 import 'package:intl/intl.dart';
 
 class Days {
+  static const String _startDate = '2024-06-07';
   static const String _dateFormat = 'yyyy-MM-dd';
 
   late DateTime _today;
@@ -31,11 +32,11 @@ class Days {
     );
 
     try {
-      _lastUpdateDay = DateTime.parse(lastUpdate ?? "2021-01-01");
+      _lastUpdateDay = DateTime.parse(lastUpdate ?? _startDate);
     } catch (e) {
       // 파싱 오류 발생 시 기본값으로 설정하고 로그 출력
       log('Days 생성자: lastUpdate 날짜 파싱 오류: $lastUpdate - $e', name: 'DaysClass');
-      _lastUpdateDay = DateTime.parse("2021-01-01"); // 오류 발생 시 안전한 기본값
+      _lastUpdateDay = DateTime.parse(_startDate); // 오류 발생 시 안전한 기본값
     }
 
     _currentDisplayEndDate = _lastDayOfPreviousMonth;
@@ -88,7 +89,7 @@ class Days {
   // 이전 1달 기간으로 이동하는 메서드
   void goToPreviousMonth() {
     final oneDay = Duration(days: 1);
-    final DateTime lastSearchableDate = DateTime(2021, 12, 31);
+    final DateTime lastSearchableDate = DateTime(2025, 7, 31);
 
     if (_currentDisplayEndDate.year == lastSearchableDate.year &&
         _currentDisplayEndDate.month == lastSearchableDate.month) {

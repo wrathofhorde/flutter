@@ -97,7 +97,7 @@ class _PricePageState extends State<PricePage> {
         _apiDataDisplay += _lastInfo;
       });
     } catch (e) {
-      debugPrint('데이터 불러오기 중 오류 발생: $e');
+      debugPrint('[_fetchThisMonthPrices] 데이터 불러오기 중 오류 발생: $e');
       setState(() {
         _apiDataDisplay = '데이터 불러오기 중 오류 발생했습니다.';
       });
@@ -124,10 +124,16 @@ class _PricePageState extends State<PricePage> {
         debugPrint('현재 처리 중인 날짜: ${formatter.format(updateDay)}');
 
         final date = formatter.format(updateDay);
-        final [btc, eth, xrp] = await _closePriceFetcher.getTradePricesForDay(
-          date,
+        final [btc, eth, xrp, usdt] = await _closePriceFetcher
+            .getTradePricesForDay(date);
+
+        final coindata = CoinData(
+          date: date,
+          btc: btc,
+          eth: eth,
+          xrp: xrp,
+          usdt: usdt,
         );
-        final coindata = CoinData(date: date, btc: btc, eth: eth, xrp: xrp);
 
         setState(() {
           _apiDataDisplay += "$coindata\n";
