@@ -82,43 +82,44 @@ class _GraphPageState extends State<GraphPage> {
 
   // --- CSV 저장 함수 추가 ---
   Future<void> _saveDailyDataAsCsv() async {
-    // 1. 저장 권한 요청
-    var status = await Permission.storage.request();
-    // 비동기 작업(await Permission.storage.request()) 후에 BuildContext를 사용하기 전에 mounted 확인
-    if (!mounted) {
-      return; // 위젯이 트리에 없으면 더 이상 진행하지 않음
-    }
-    if (!status.isGranted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('파일 저장을 위한 저장소 권한이 필요합니다.')));
-      return;
-    }
-    if (_dailyCoinData.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('저장할 일별 코인 데이터가 없습니다.')));
-      return;
-    }
-    // 2. CSV 데이터 준비
-    List<List<dynamic>> csvData = [];
-    // 헤더 추가
-    csvData.add(['Date', 'BTC', 'ETH', 'XRP', 'USDT']);
-    // 평균가 추가
-    final avgBtc = _yearAggregatedData?['btc']['avg'];
-    final avgEth = _yearAggregatedData?['eth']['avg'];
-    final avgXrp = _yearAggregatedData?['xrp']['avg'];
-    final avgUsdt = _yearAggregatedData?['usdt']['avg'];
-    csvData.add(["Average", avgBtc, avgEth, avgXrp, avgUsdt]);
-    // 데이터 추가
-    for (var data in _dailyCoinData) {
-      csvData.add(data.toList());
-    }
-    // 3. CSV 문자열로 변환
-    // 3. CSV 문자열로 변환 (구분자 탭으로 변경)
-    String csvString = const ListToCsvConverter().convert(csvData);
-    // 4. 파일 경로 설정 및 저장
     try {
+      // 1. 저장 권한 요청
+      var status = await Permission.storage.request();
+      // 비동기 작업(await Permission.storage.request()) 후에 BuildContext를 사용하기 전에 mounted 확인
+      if (!mounted) {
+        return; // 위젯이 트리에 없으면 더 이상 진행하지 않음
+      }
+      if (!status.isGranted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('파일 저장을 위한 저장소 권한이 필요합니다.')),
+        );
+        return;
+      }
+      if (_dailyCoinData.isEmpty) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('저장할 일별 코인 데이터가 없습니다.')));
+        return;
+      }
+      // 2. CSV 데이터 준비
+      List<List<dynamic>> csvData = [];
+      // 헤더 추가
+      csvData.add(['Date', 'BTC', 'ETH', 'XRP', 'USDT']);
+      // 평균가 추가
+      final avgBtc = _yearAggregatedData?['btc']['avg'];
+      final avgEth = _yearAggregatedData?['eth']['avg'];
+      final avgXrp = _yearAggregatedData?['xrp']['avg'];
+      final avgUsdt = _yearAggregatedData?['usdt']['avg'];
+      csvData.add(["Average", avgBtc, avgEth, avgXrp, avgUsdt]);
+      // 데이터 추가
+      for (var data in _dailyCoinData) {
+        csvData.add(data.toList());
+      }
+      // 3. CSV 문자열로 변환
+      // 3. CSV 문자열로 변환 (구분자 탭으로 변경)
+      String csvString = const ListToCsvConverter().convert(csvData);
+      // 4. 파일 경로 설정 및 저장
+
       final directory = await getApplicationDocumentsDirectory();
       final subDirectory = 'coin prices';
       // 서브 디렉터리 경로 생성
