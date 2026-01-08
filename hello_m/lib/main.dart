@@ -17,24 +17,6 @@ Future<void> main() async {
   final String dbname = "bexu.sq3";
   final String tablename = "major_coins";
   try {
-    const windowSize = Size(800, 1000);
-    await windowManager.ensureInitialized();
-
-    WindowOptions windowOptions = const WindowOptions(
-      size: windowSize,
-      title: "BTC, ETH, XRP, USDT",
-      center: true, // 창을 화면 중앙에 배치
-      skipTaskbar: false, // 작업 표시줄에 앱 표시
-      titleBarStyle: TitleBarStyle.normal,
-      minimumSize: windowSize, // 창의 최소 크기를 고정 크기와 동일하게 설정
-      maximumSize: windowSize, // 창의 최대 크기를 고정 크기와 동일하게 설정
-    );
-
-    await windowManager.waitUntilReadyToShow(windowOptions, () async {
-      await windowManager.show();
-      await windowManager.focus();
-    });
-
     await initializeDateFormatting('ko_KR', null); // 한국어 로케일 데이터 초기화
 
     // 데이터베이스 초기화

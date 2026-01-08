@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:flutter/foundation.dart';
 
@@ -26,8 +27,8 @@ class DatabaseHelper {
 
   // 데이터베이스를 초기화하는 실제 로직
   Future<Database> _initDb() async {
-    String currentDirectoryPath = Directory.current.path;
-    String path = join(currentDirectoryPath, _dbName);
+    Directory documentsDirectory = await getApplicationDocumentsDirectory();
+    String path = join(documentsDirectory.path, _dbName);
     debugPrint('Database path: $path');
 
     return sqlite3.open(path);

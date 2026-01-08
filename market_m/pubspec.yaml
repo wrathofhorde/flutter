@@ -40,10 +40,11 @@ dependencies:
   path_provider: ^2.1.5
   sqflite_common_ffi: ^2.3.6
   sqflite_common_ffi_web: ^1.0.0
-  flutter_dotenv: ^5.2.1
+  flutter_dotenv: ^6.0.0
   collection: ^1.19.1
-  fl_chart: ^1.0.0
-  window_manager: ^0.3.0 # window 크기 조정
+  fl_chart: ^1.1.1
+  window_manager: ^0.5.1 # window 크기 조정
+  sqlite3_flutter_libs: ^0.5.41
 
 dev_dependencies:
   flutter_test:
@@ -54,7 +55,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -98,3 +99,6 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+dependency_overrides:
+  # 2.1.4가 아닌 2.2.0을 강제합니다.
+  vector_math: 2.2.0
