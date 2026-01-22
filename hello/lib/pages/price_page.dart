@@ -124,7 +124,7 @@ class _PricePageState extends State<PricePage> {
         debugPrint('현재 처리 중인 날짜: ${formatter.format(updateDay)}');
 
         final date = formatter.format(updateDay);
-        final [btc, eth, xrp, usdt] = await _closePriceFetcher
+        final [btc, eth, xrp, usdt, pol] = await _closePriceFetcher
             .getTradePricesForDay(date);
 
         final coindata = CoinData(
@@ -133,6 +133,7 @@ class _PricePageState extends State<PricePage> {
           eth: eth,
           xrp: xrp,
           usdt: usdt,
+          pol: pol,
         );
 
         setState(() {
@@ -205,7 +206,7 @@ class _PricePageState extends State<PricePage> {
                     child: SelectableText(
                       _apiDataDisplay, // _apiDataDisplay 변수 사용
                       style: const TextStyle(
-                        fontSize: 15,
+                        fontSize: 14,
                         fontFamily: 'Cascadia Code', // 가독성을 위해 고정폭 폰트 추천
                         height: 1.5, // 줄 간격 조절
                       ),

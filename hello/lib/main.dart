@@ -14,15 +14,15 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // /Users/wrath/Library/Containers/com.example.hello/Data/bexu.sq3
-  final String dbname = "bexu.sq3";
+  final String dbname = "bexup.sq3";
   final String tablename = "major_coins";
   try {
-    const windowSize = Size(800, 1000);
+    const windowSize = Size(860, 1000);
     await windowManager.ensureInitialized();
 
     WindowOptions windowOptions = const WindowOptions(
       size: windowSize,
-      title: "BTC, ETH, XRP, USDT",
+      title: "BTC, ETH, XRP, USDT, POL",
       center: true, // 창을 화면 중앙에 배치
       skipTaskbar: false, // 작업 표시줄에 앱 표시
       titleBarStyle: TitleBarStyle.normal,

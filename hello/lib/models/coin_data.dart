@@ -9,6 +9,7 @@ class CoinData {
   final int eth;
   final int xrp;
   final int usdt;
+  final int pol;
 
   CoinData({
     this.id,
@@ -17,6 +18,7 @@ class CoinData {
     required this.eth,
     required this.xrp,
     required this.usdt,
+    required this.pol,
   });
 
   // Map에서 CoinData 객체를 생성하는 팩토리 생성자
@@ -27,6 +29,7 @@ class CoinData {
     eth: map['eth'] as int,
     xrp: map['xrp'] as int,
     usdt: map['usdt'] as int,
+    pol: map['pol'] as int,
   );
 
   Map<String, dynamic> toMap() => {
@@ -36,9 +39,10 @@ class CoinData {
     'eth': eth,
     'xrp': xrp,
     'usdt': usdt,
+    'pol': pol,
   };
 
-  List<dynamic> toList() => [date, btc, eth, xrp, usdt];
+  List<dynamic> toList() => [date, btc, eth, xrp, usdt, pol];
 
   NumberFormat get _numberFormatter => NumberFormat('#,###');
 
@@ -50,6 +54,9 @@ class CoinData {
 
   String get fusdt => _numberFormatter.format(usdt);
 
+  String get fpol => _numberFormatter.format(pol);
+
   @override
-  String toString() => '$date BTC:$fbtc원, ETH:$feth원, XRP:$fxrp원, USDT:$fusdt원';
+  String toString() =>
+      '$date BTC:$fbtc원, ETH:$feth원, XRP:$fxrp원, USDT:$fusdt원, POL:$fpol원';
 }

@@ -5,7 +5,13 @@ import 'package:flutter/foundation.dart'; // debugPrint를 위해
 class ClosePrice {
   final String _baseUrl = "https://api.upbit.com/v1";
   final Map<String, String> _headers = {"accept": "application/json"};
-  final List<String> _markets = ["KRW-BTC", "KRW-ETH", "KRW-XRP", "KRW-USDT"];
+  final List<String> _markets = [
+    "KRW-BTC",
+    "KRW-ETH",
+    "KRW-XRP",
+    "KRW-USDT",
+    "KRW-POL",
+  ];
 
   Future<List<int>> getTradePricesForDay(String day) async {
     final String dateTimeParam = "${day}T15:00:00Z"; // Z는 UTC를 나타냄

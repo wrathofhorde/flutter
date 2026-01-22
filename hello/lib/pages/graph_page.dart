@@ -104,13 +104,14 @@ class _GraphPageState extends State<GraphPage> {
       // 2. CSV 데이터 준비
       List<List<dynamic>> csvData = [];
       // 헤더 추가
-      csvData.add(['Date', 'BTC', 'ETH', 'XRP', 'USDT']);
+      csvData.add(['Date', 'BTC', 'ETH', 'XRP', 'USDT', 'POL']);
       // 평균가 추가
       final avgBtc = _yearAggregatedData?['btc']['avg'];
       final avgEth = _yearAggregatedData?['eth']['avg'];
       final avgXrp = _yearAggregatedData?['xrp']['avg'];
       final avgUsdt = _yearAggregatedData?['usdt']['avg'];
-      csvData.add(["Average", avgBtc, avgEth, avgXrp, avgUsdt]);
+      final avgPol = _yearAggregatedData?['pol']['avg'];
+      csvData.add(["Average", avgBtc, avgEth, avgXrp, avgUsdt, avgPol]);
       // 데이터 추가
       for (var data in _dailyCoinData) {
         csvData.add(data.toList());
@@ -182,6 +183,15 @@ class _GraphPageState extends State<GraphPage> {
       int index = entry.key;
       CoinData data = entry.value;
       return FlSpot(index.toDouble(), data.usdt.toDouble());
+    }).toList();
+  }
+
+  // POL 그래프 데이터를 FlSpot 리스트로 변환하는 함수
+  List<FlSpot> _getPolSpots() {
+    return _dailyCoinData.asMap().entries.map((entry) {
+      int index = entry.key;
+      CoinData data = entry.value;
+      return FlSpot(index.toDouble(), data.pol.toDouble());
     }).toList();
   }
 
@@ -285,11 +295,18 @@ class _GraphPageState extends State<GraphPage> {
                   lineColor: Colors.green, // XRP 그래프 색상 지정
                   fullCoinData: _dailyCoinData,
                 ),
-                // XRP 그래프 - CoinLineChart 위젯 사용
+                // USDT 그래프 - CoinLineChart 위젯 사용
                 CoinLineChart(
                   coinName: 'USDT',
                   spots: _getUsdtSpots(),
                   lineColor: Colors.purple, // USDT 그래프 색상 지정
+                  fullCoinData: _dailyCoinData,
+                ),
+                // POL 그래프 - CoinLineChart 위젯 사용
+                CoinLineChart(
+                  coinName: 'POL',
+                  spots: _getPolSpots(),
+                  lineColor: Colors.cyan, // USDT 그래프 색상 지정
                   fullCoinData: _dailyCoinData,
                 ),
                 const SizedBox(height: 10),

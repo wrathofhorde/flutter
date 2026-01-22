@@ -58,6 +58,7 @@ class CoinPriceTable extends StatelessWidget {
                     _buildTableDataRow('ETH', yearAggregatedData!['eth']),
                     _buildTableDataRow('XRP', yearAggregatedData!['xrp']),
                     _buildTableDataRow('USDT', yearAggregatedData!['usdt']),
+                    _buildTableDataRow('POL', yearAggregatedData!['pol']),
                   ],
                 ),
         ),
