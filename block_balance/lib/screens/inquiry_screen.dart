@@ -26,17 +26,17 @@ class _InquiryScreenState extends State<InquiryScreen> {
     setState(() => _isLoading = true);
 
     final db = await _dbHelper.database;
-    final ethThreshold = double.tryParse(_ethThresholdController.text) ?? 0.0;
-    final polThreshold = double.tryParse(_polThresholdController.text) ?? 0.0;
+    final ethThreshold =
+        double.tryParse(_ethThresholdController.text) ?? 0.0001;
+    final polThreshold =
+        double.tryParse(_polThresholdController.text) ?? 0.0001;
 
-    // 1. 등록된 지갑 주소 가져오기
     final List<Map<String, dynamic>> walletData = await _dbHelper
         .getAllWallets();
     final Set<String> registeredAddresses = walletData
-        .map((w) => w['address'].toString().toLowerCase())
+        .map((w) => w['address'].toString().toLowerCase().trim())
         .toSet();
 
-    // 2. 데이터 로드
     final List<Map<String, dynamic>> rawData = db
         .select('''
       SELECT date_time, token_value, txn_fee, network, token_symbol, from_address, to_address 
@@ -55,33 +55,24 @@ class _InquiryScreenState extends State<InquiryScreen> {
           double.tryParse(tx['txn_fee'].toString().replaceAll(',', '')) ?? 0.0;
       String network = tx['network']?.toString().toUpperCase() ?? '';
       String symbol = tx['token_symbol'] ?? 'UNKNOWN';
-      String fromAddr = tx['from_address']?.toString().toLowerCase() ?? '';
-      String toAddr = tx['to_address']?.toString().toLowerCase() ?? '';
+      String fromAddr =
+          tx['from_address']?.toString().toLowerCase().trim() ?? '';
+      String toAddr = tx['to_address']?.toString().toLowerCase().trim() ?? '';
 
-      // 날짜 추출
       DateTime? fullDate = DateTime.tryParse(tx['date_time'].toString());
       if (fullDate == null) continue;
       String dateStr = DateFormat('yyyy-MM-dd').format(fullDate);
 
-      // 3. 입고/출고/스캠 분류 로직
       String type = "기타";
-
       if (registeredAddresses.contains(fromAddr)) {
         type = "출고";
       } else if (registeredAddresses.contains(toAddr)) {
-        // 입고인 경우에만 스캠 체크 수행
-        double currentThreshold = (network == 'ETHEREUM')
+        double threshold = (network == 'ETHEREUM')
             ? ethThreshold
             : polThreshold;
-
-        if (value <= currentThreshold) {
-          type = "스캠"; // 임계값보다 작거나 같으면 스캠으로 분류
-        } else {
-          type = "입고";
-        }
+        type = (value <= threshold) ? "스캠" : "입고";
       }
 
-      // 4. 복합 키 생성 및 집계
       String groupKey = "${dateStr}_${network}_${symbol}_$type";
 
       if (!aggregatedMap.containsKey(groupKey)) {
@@ -99,9 +90,17 @@ class _InquiryScreenState extends State<InquiryScreen> {
       aggregatedMap[groupKey]!['fee'] += fee;
     }
 
+    List<Map<String, dynamic>> sortedList = aggregatedMap.values.toList();
+    sortedList.sort((a, b) {
+      int dateCompare = b['date'].compareTo(a['date']);
+      if (dateCompare == 0) {
+        return a['network'].compareTo(b['network']);
+      }
+      return dateCompare;
+    });
+
     setState(() {
-      _summaryData = aggregatedMap.values.toList();
-      _summaryData.sort((a, b) => b['date'].compareTo(a['date']));
+      _summaryData = sortedList;
       _isLoading = false;
     });
   }
@@ -109,7 +108,11 @@ class _InquiryScreenState extends State<InquiryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('상세 거래 집계 조회')),
+      appBar: AppBar(
+        title: const Text('거래 집계 분석 (텍스트 선택 가능)'),
+        backgroundColor: Colors.blueGrey[900],
+        foregroundColor: Colors.white,
+      ),
       body: Column(
         children: [
           _buildFilterHeader(),
@@ -117,7 +120,7 @@ class _InquiryScreenState extends State<InquiryScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _summaryData.isEmpty
-                ? const Center(child: Text('데이터를 조회하세요.'))
+                ? const Center(child: Text('조회 버튼을 눌러주세요.'))
                 : _buildDataTable(),
           ),
         ],
@@ -125,87 +128,173 @@ class _InquiryScreenState extends State<InquiryScreen> {
     );
   }
 
-  // 상단 필터 UI
   Widget _buildFilterHeader() {
     return Container(
-      padding: const EdgeInsets.all(12.0),
-      color: Colors.grey[100],
-      child: Column(
+      padding: const EdgeInsets.all(12),
+      color: Colors.blueGrey[50],
+      child: Row(
         children: [
-          Row(
-            children: [
-              Expanded(child: _buildInput("ETH Scam", _ethThresholdController)),
-              const SizedBox(width: 8),
-              Expanded(child: _buildInput("POL Scam", _polThresholdController)),
-              const SizedBox(width: 8),
-              ElevatedButton(
-                onPressed: _isLoading ? null : _fetchAndSummarize,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blueGrey[700],
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text("조회"),
-              ),
-            ],
+          SizedBox(
+            width: 160,
+            child: _buildInput(
+              "ETH Scam Threshold",
+              _ethThresholdController,
+              Colors.blue,
+            ),
+          ),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 160,
+            child: _buildInput(
+              "POL Scam Threshold",
+              _polThresholdController,
+              Colors.purple,
+            ),
+          ),
+          const SizedBox(width: 20),
+          ElevatedButton.icon(
+            onPressed: _isLoading ? null : _fetchAndSummarize,
+            icon: const Icon(Icons.search),
+            label: const Text("데이터 집계 조회"),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blueGrey[800],
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildInput(String label, TextEditingController controller) {
+  Widget _buildInput(
+    String label,
+    TextEditingController controller,
+    Color color,
+  ) {
     return TextField(
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       decoration: InputDecoration(
         labelText: label,
+        labelStyle: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+        ),
         isDense: true,
         border: const OutlineInputBorder(),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 10,
+          vertical: 12,
+        ),
       ),
     );
   }
 
-  // 요청하신 필드 구성의 테이블
   Widget _buildDataTable() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.vertical,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          columnSpacing: 25,
-          headingRowColor: WidgetStateProperty.all(
-            Colors.blueGrey[50],
-          ), // MaterialStateProperty -> WidgetStateProperty (최신 버전 대응)
-          columns: const [
-            DataColumn(label: Text('날짜')),
-            DataColumn(label: Text('네트워크')),
-            DataColumn(label: Text('코인')),
-            DataColumn(label: Text('종류')),
-            DataColumn(label: Text('거래량')),
-            DataColumn(label: Text('수수료')),
-          ],
-          rows: _summaryData.map((data) {
-            return DataRow(
-              cells: [
-                DataCell(Text(data['date'].toString())),
-                DataCell(Text(data['network'].toString())),
-                DataCell(Text(data['coin'].toString())),
-                // 에러 났던 부분 수정: data[type] -> data['type']
-                DataCell(
-                  Text(
-                    data['type'].toString(),
-                    style: TextStyle(
-                      color: data['type'] == '입고' ? Colors.blue : Colors.red,
-                      fontWeight: FontWeight.bold,
-                    ),
+    return SelectionArea(
+      // <-- 테이블 전체를 SelectionArea로 감싸면 내부 텍스트 선택 가능
+      child: SizedBox(
+        width: double.infinity,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.vertical,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              columnSpacing: 40,
+              headingRowColor: WidgetStateProperty.all(Colors.blueGrey[100]),
+              columns: const [
+                DataColumn(
+                  label: Text(
+                    '날짜',
+                    style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
-                DataCell(Text(data['amount'].toStringAsFixed(4))),
-                DataCell(Text(data['fee'].toStringAsFixed(6))),
+                DataColumn(
+                  label: Text(
+                    '네트워크',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    '코인',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    '종류',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    '거래량 합계',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    '수수료 합계',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
               ],
-            );
-          }).toList(),
+              rows: _summaryData.map((data) {
+                Color rowColor = data['network'] == 'ETHEREUM'
+                    ? Colors.blue.withValues(alpha: 0.05)
+                    : Colors.purple.withValues(alpha: 0.05);
+
+                Color typeColor = Colors.grey;
+                if (data['type'] == '입고') typeColor = Colors.blue[700]!;
+                if (data['type'] == '출고') typeColor = Colors.red[700]!;
+                if (data['type'] == '스캠') typeColor = Colors.orange[800]!;
+
+                String formatCryptoAmount(double value) {
+                  // 1. 최대 18자리 소수점까지 문자열로 변환
+                  String fixedString = value.toStringAsFixed(18);
+
+                  // 2. 정규식을 사용하여 소수점 뒤의 불필요한 0과 소수점 자체(예: 10.0 -> 10) 제거
+                  RegExp removeTrailingZeros = RegExp(r'([.]*0+)(?!.*\d)');
+                  return fixedString.replaceAll(removeTrailingZeros, '');
+                }
+
+                return DataRow(
+                  color: WidgetStateProperty.all(rowColor),
+                  cells: [
+                    DataCell(Text(data['date'])),
+                    DataCell(
+                      Text(
+                        data['network'],
+                        style: TextStyle(
+                          color: data['network'] == 'ETHEREUM'
+                              ? Colors.blue[900]
+                              : Colors.purple[900],
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    DataCell(Text(data['coin'])),
+                    DataCell(
+                      Text(
+                        data['type'],
+                        style: TextStyle(
+                          color: typeColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    // 거래량: 최대 18자리 표시 및 0 제거 적용
+                    DataCell(Text(formatCryptoAmount(data['amount']))),
+                    // 수수료: 최대 18자리 표시 및 0 제거 적용
+                    DataCell(Text(formatCryptoAmount(data['fee']))),
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
         ),
       ),
     );

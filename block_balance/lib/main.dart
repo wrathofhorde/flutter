@@ -1,13 +1,28 @@
+import 'dart:io'; // Platform 사용을 위해 필수!
+import 'package:block_balance/screens/inquiry_screen.dart';
+import 'package:block_balance/screens/wallet_management_screen.dart';
 import 'package:flutter/material.dart';
-import 'screens/wallet_management_screen.dart';
-import 'screens/inquiry_screen.dart';
+import 'package:window_manager/window_manager.dart'; // windowManager 사용을 위해 필요
 
 // pol HOT: 0xc8f7787d062a91a5367dde72b35eeb5da807102d
 // eth hot : 0x545b7b7e9372ea6ddc805c0cdee3025eee1880b1
 
-void main() {
-  // 위젯 바인딩 초기화 (윈도우 앱 안정성)
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 윈도우 크기 조정 (Desktop 전용)
+  if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+    await windowManager.ensureInitialized();
+    WindowOptions windowOptions = const WindowOptions(
+      size: Size(1000, 900), // 폭을 1000으로 줄이고 높이를 900으로 확대
+      center: true,
+      title: "Block Balance Manager",
+    );
+    windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      await windowManager.focus();
+    });
+  }
   runApp(const BlockBalanceApp());
 }
 
