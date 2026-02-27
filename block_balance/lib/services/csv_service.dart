@@ -14,10 +14,10 @@ class CsvService {
 
     if (fileName.toLowerCase().startsWith('pol_')) {
       await _parseAndProcessPol(fields, walletId, network, fileName);
-    }
-    // eth_ 접두사 처리 추가
-    else if (fileName.toLowerCase().startsWith('eth_')) {
+      LogService().addLog('📊 [$fileName] 추가 완료');
+    } else if (fileName.toLowerCase().startsWith('eth_')) {
       await _parseAndProcessEth(fields, walletId, network, fileName);
+      LogService().addLog('📊 [$fileName] 추가 완료');
     } else if (fileName.toLowerCase().startsWith('prc20_')) {
       final batch = _parsePrc20(fields, walletId, network);
       await _dbHelper.insertTransactionsBatch(batch, fileName);
