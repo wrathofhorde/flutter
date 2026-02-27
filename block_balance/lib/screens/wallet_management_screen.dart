@@ -32,8 +32,9 @@ class _WalletManagementScreenState extends State<WalletManagementScreen> {
     final data = await _dbHelper.getAllWallets();
     setState(() {
       _wallets = data;
-      if (_wallets.isNotEmpty && _selectedWalletId == null)
+      if (_wallets.isNotEmpty && _selectedWalletId == null) {
         _selectedWalletId = _wallets.first['id'];
+      }
     });
   }
 
@@ -189,8 +190,9 @@ class _WalletManagementScreenState extends State<WalletManagementScreen> {
       type: FileType.custom,
       allowedExtensions: ['csv'],
     );
-    if (result != null)
+    if (result != null) {
       setState(() => _selectedFilePath = result.files.single.path);
+    }
   }
 
   Future<void> _importCsv() async {

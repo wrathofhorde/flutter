@@ -1,8 +1,8 @@
+import 'package:flutter/widgets.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'log_service.dart';
 
 class DatabaseHelper {
@@ -18,8 +18,13 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDB(String filePath) async {
-    final dbPath = await getApplicationDocumentsDirectory();
-    final path = join(dbPath.path, filePath);
+    // Directory.current.path는 .exe 파일이 실행되는 위치(루트)를 반환합니다.
+    final rootPath = Directory.current.path;
+    final path = join(rootPath, filePath);
+
+    // 디버깅을 위해 콘솔에 DB 위치 출력 (로그 콘솔에서 확인 가능)
+    debugPrint('💾 Database Path: $path');
+
     final db = sqlite3.open(path);
 
     db.execute('''
