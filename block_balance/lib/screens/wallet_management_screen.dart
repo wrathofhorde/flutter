@@ -22,6 +22,9 @@ class _WalletManagementScreenState extends State<WalletManagementScreen> {
   int? _importWalletId;
   String? _importPath;
 
+  // 로딩 상태 관리를 위한 변수
+  bool _isImporting = false;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -152,11 +155,10 @@ class _WalletManagementScreenState extends State<WalletManagementScreen> {
     );
   }
 
-  // 2. 임포트 카드
+  // 2. 임포트 카드 (로딩 인디케이터 적용됨)
   Widget _buildImportCard() {
     return Card(
       elevation: 2,
-      // color: Colors.blueGrey[50],
       child: Padding(
         padding: const EdgeInsets.all(12.0),
         child: Row(
@@ -194,7 +196,7 @@ class _WalletManagementScreenState extends State<WalletManagementScreen> {
             ),
             const SizedBox(width: 10),
             ElevatedButton.icon(
-              onPressed: _pickFile,
+              onPressed: _isImporting ? null : _pickFile, // 로딩 중 파일 선택 금지
               icon: const Icon(Icons.file_open, size: 18),
               label: Text(_importPath == null ? "파일 선택" : "선택됨"),
               style: ElevatedButton.styleFrom(
@@ -204,13 +206,22 @@ class _WalletManagementScreenState extends State<WalletManagementScreen> {
             ),
             const SizedBox(width: 10),
             ElevatedButton(
-              onPressed: _runImport,
+              onPressed: _isImporting ? null : _runImport, // 로딩 중 중복 클릭 방지
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blueGrey[800],
                 foregroundColor: Colors.white,
-                minimumSize: const Size(100, 50),
+                minimumSize: const Size(120, 50),
               ),
-              child: const Text("임포트 실행"),
+              child: _isImporting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Text("임포트 실행"),
             ),
           ],
         ),
@@ -219,17 +230,13 @@ class _WalletManagementScreenState extends State<WalletManagementScreen> {
   }
 
   // 3. 작업 로그 콘솔
-  // 3. 작업 로그 콘솔 (이과 감성 탈피 버전)
   Widget _buildLogConsole() {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Colors.white, // 배경을 흰색으로 변경
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Colors.blueGrey[100]!,
-          width: 1.5,
-        ), // 부드러운 테두리
+        border: Border.all(color: Colors.blueGrey[100]!, width: 1.5),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -245,10 +252,9 @@ class _WalletManagementScreenState extends State<WalletManagementScreen> {
           final logs = LogService().logs;
           return SelectionArea(
             child: ListView.builder(
-              reverse: false, // 최신 로그가 아래에 쌓임
+              reverse: false,
               itemCount: logs.length,
               itemBuilder: (context, i) {
-                // 로그 내용에 따라 색상 분기 (성공: 파랑, 실패: 빨강, 일반: 그레이)
                 Color textColor = Colors.blueGrey[800]!;
                 if (logs[i].contains("✅")) textColor = Colors.indigo[700]!;
                 if (logs[i].contains("❌") || logs[i].contains("⚠️")) {
@@ -261,7 +267,7 @@ class _WalletManagementScreenState extends State<WalletManagementScreen> {
                     logs[i],
                     style: TextStyle(
                       color: textColor,
-                      fontFamily: 'Malgun Gothic', // 윈도우 기본 폰트 지향
+                      fontFamily: 'Malgun Gothic',
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                       height: 1.4,
@@ -276,7 +282,7 @@ class _WalletManagementScreenState extends State<WalletManagementScreen> {
     );
   }
 
-  // 4. 등록된 지갑 리스트 (새로 추가)
+  // 4. 등록된 지갑 리스트
   Widget _buildWalletList() {
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _dbHelper.getAllWallets(),
@@ -311,7 +317,9 @@ class _WalletManagementScreenState extends State<WalletManagementScreen> {
                     color: Colors.redAccent,
                     size: 20,
                   ),
-                  onPressed: () => _deleteWallet(w['id']),
+                  onPressed: _isImporting
+                      ? null
+                      : () => _deleteWallet(w['id']), // 로딩 중 삭제 금지
                 ),
               );
             },
@@ -331,12 +339,11 @@ class _WalletManagementScreenState extends State<WalletManagementScreen> {
     );
     _addressController.clear();
     _aliasController.clear();
-    setState(() {}); // 리스트 갱신
-    LogService().addLog("✅ 새 지갑 등록 완료: ${_addressController.text}");
+    setState(() {});
+    LogService().addLog("✅ 새 지갑 등록 완료");
   }
 
   void _deleteWallet(int id) async {
-    // DatabaseHelper에 deleteWallet 메서드 추가 필요
     await _dbHelper.deleteWallet(id);
     setState(() {});
     LogService().addLog("🗑️ 지갑 삭제 완료 (ID: $id)");
@@ -355,14 +362,23 @@ class _WalletManagementScreenState extends State<WalletManagementScreen> {
       LogService().addLog("❌ 지갑과 파일을 먼저 선택해주세요.");
       return;
     }
-    final wallet = await _dbHelper.getWalletById(_importWalletId!);
-    if (wallet != null) {
-      await _csvService.importCsv(
-        _importPath!,
-        _importWalletId!,
-        wallet['network'],
-      );
-      setState(() => _importPath = null);
+
+    setState(() => _isImporting = true); // 로딩 시작
+
+    try {
+      final wallet = await _dbHelper.getWalletById(_importWalletId!);
+      if (wallet != null) {
+        await _csvService.importCsv(
+          _importPath!,
+          _importWalletId!,
+          wallet['network'],
+        );
+        setState(() => _importPath = null);
+      }
+    } catch (e) {
+      LogService().addLog("❌ 임포트 실패: $e");
+    } finally {
+      setState(() => _isImporting = false); // 로딩 종료
     }
   }
 }

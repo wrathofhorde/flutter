@@ -14,7 +14,7 @@ void main() async {
   if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
     await windowManager.ensureInitialized();
     WindowOptions windowOptions = const WindowOptions(
-      size: Size(1000, 900), // 폭을 1000으로 줄이고 높이를 900으로 확대
+      size: Size(900, 1000), // 폭을 900으로 줄이고 높이를 1000으로 확대
       center: true,
       title: "Block Balance Manager",
     );

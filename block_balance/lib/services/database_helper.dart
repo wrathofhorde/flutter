@@ -40,7 +40,7 @@ class DatabaseHelper {
     db.execute('''
       CREATE TABLE IF NOT EXISTS transactions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        tx_hash TEXT,
+        tx_hash TEXT UNIQUE,
         block_no INTEGER,
         unix_timestamp INTEGER,
         date_time TEXT,
@@ -121,17 +121,7 @@ class DatabaseHelper {
   ) async {
     final db = await database;
 
-    // 중복 해시 체크를 위한 맵
-    Map<String, int> hashCount = {};
-    for (var params in paramSets) {
-      String txHash = params[0].toString();
-      hashCount[txHash] = (hashCount[txHash] ?? 0) + 1;
-    }
-
-    // 최적화를 위해 Statement 미리 준비
-    final deleteStmt = db.prepare(
-      'DELETE FROM transactions WHERE tx_hash = ? AND source_file = ?',
-    );
+    // 1. UNIQUE 제약조건이 있으므로 DELETE 문과 중복 체크 Map이 아예 필요 없습니다.
     final insertStmt = db.prepare('''
       INSERT OR IGNORE INTO transactions 
       (tx_hash, block_no, unix_timestamp, date_time, from_address, to_address, token_value, token_name, token_symbol, txn_fee, network, wallet_id, source_file)
@@ -139,22 +129,13 @@ class DatabaseHelper {
     ''');
 
     try {
+      // 2. 그냥 넣기만 하면 됩니다. 중복이면 DB가 알아서 IGNORE(무시)합니다.
       for (var params in paramSets) {
-        final String txHash = params[0].toString();
-
-        // 동일 파일 내 중복 트랜잭션이 감지되면 기존 데이터 삭제 후 갱신(혹은 스킵) 전략
-        if (hashCount[txHash]! > 1) {
-          deleteStmt.execute([txHash, fileName]);
-        }
-
-        // 데이터 삽입
         insertStmt.execute([...params, fileName]);
       }
     } catch (e) {
       LogService().addLog('❌ DB 배치 삽입 에러: $e');
     } finally {
-      // 메모리 누수 방지를 위한 dispose
-      deleteStmt.dispose();
       insertStmt.dispose();
     }
   }
