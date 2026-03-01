@@ -17,11 +17,9 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDB(String filePath) async {
-    // 윈도우 앱 루트 폴더(실행파일 위치)에 DB 생성
     final rootPath = Directory.current.path;
     final path = join(rootPath, filePath);
 
-    // 디버깅용 경로 출력
     debugPrint('💾 Database Path: $path');
 
     final db = sqlite3.open(path);
@@ -62,12 +60,7 @@ class DatabaseHelper {
 
   // --- 지갑 관리 메서드 ---
 
-  // 지갑 등록 (UI에서 발생하는 'insertWallet' 정의되지 않음 에러 해결)
-  Future<void> insertWallet(
-    String address,
-    String network,
-    String alias,
-  ) async {
+  Future<void> insertWallet(String address, String network, String alias) async {
     final db = await database;
     db.execute(
       'INSERT INTO wallets (address, network, alias) VALUES (?, ?, ?)',
@@ -75,7 +68,6 @@ class DatabaseHelper {
     );
   }
 
-  // 모든 지갑 가져오기
   Future<List<Map<String, dynamic>>> getAllWallets() async {
     final db = await database;
     final ResultSet results = db.select(
@@ -84,54 +76,54 @@ class DatabaseHelper {
     return results.map((row) => Map<String, dynamic>.from(row)).toList();
   }
 
-  // ID로 특정 지갑 정보 가져오기
   Future<Map<String, dynamic>?> getWalletById(int id) async {
     final db = await database;
-    final ResultSet results = db.select('SELECT * FROM wallets WHERE id = ?', [
-      id,
-    ]);
+    final ResultSet results = db.select('SELECT * FROM wallets WHERE id = ?', [id]);
     return results.isEmpty ? null : Map<String, dynamic>.from(results.first);
   }
 
   // --- 거래 내역 관리 메서드 ---
 
-  // 수수료 업데이트 로직 (erc20 임포트 후 eth/pol 임포트 시 매칭용)
   Future<bool> updateTransactionFee(String txHash, String fee) async {
     final db = await database;
-
-    db.execute('UPDATE transactions SET txn_fee = ? WHERE tx_hash = ?', [
-      fee,
-      txHash,
-    ]);
-
-    // 영향받은 행의 수 확인
-    final changes = db.updatedRows;
-
-    if (changes == 0) {
-      // 매칭되는 해시가 없는 경우 로그만 남김 (스킵)
-      return false;
-    }
-    return true;
+    db.execute('UPDATE transactions SET txn_fee = ? WHERE tx_hash = ?', [fee, txHash]);
+    return db.updatedRows > 0;
   }
 
-  // 대량 거래 내역 삽입 (CSV 임포트용)
+  // [수정된 부분] 대량 거래 내역 삽입 시 0원 데이터 필터링 로직 추가
   Future<void> insertTransactionsBatch(
     List<List<Object?>> paramSets,
     String fileName,
   ) async {
     final db = await database;
 
-    // 1. UNIQUE 제약조건이 있으므로 DELETE 문과 중복 체크 Map이 아예 필요 없습니다.
     final insertStmt = db.prepare('''
       INSERT OR IGNORE INTO transactions 
       (tx_hash, block_no, unix_timestamp, date_time, from_address, to_address, token_value, token_name, token_symbol, txn_fee, network, wallet_id, source_file)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''');
 
+    int skipCount = 0;
+    int insertCount = 0;
+
     try {
-      // 2. 그냥 넣기만 하면 됩니다. 중복이면 DB가 알아서 IGNORE(무시)합니다.
       for (var params in paramSets) {
+        // params[6]이 token_value 위치 (위 쿼리의 순서 참고)
+        String rawVal = params[6]?.toString().replaceAll(',', '').trim() ?? "0";
+        double tokenValue = double.tryParse(rawVal) ?? 0.0;
+
+        // --- 0원 데이터 필터링 ---
+        if (tokenValue == 0) {
+          skipCount++;
+          continue; // DB에 넣지 않고 다음 루프로 건너뜀
+        }
+
         insertStmt.execute([...params, fileName]);
+        insertCount++;
+      }
+      
+      if (skipCount > 0) {
+        LogService().addLog('ℹ️ $fileName: 값이 0인 데이터 $skipCount건 제외됨 (성공: $insertCount건)');
       }
     } catch (e) {
       LogService().addLog('❌ DB 배치 삽입 에러: $e');
@@ -140,11 +132,15 @@ class DatabaseHelper {
     }
   }
 
-  // lib/services/database_helper.dart 내부에 추가
   Future<void> deleteWallet(int id) async {
     final db = await database;
-    // 지갑을 삭제하면 해당 지갑의 거래 내역도 지울지 결정해야 하지만,
-    // 일단 안전하게 지갑 정보만 삭제합니다.
     db.execute('DELETE FROM wallets WHERE id = ?', [id]);
+  }
+
+  // [추가 팁] 이미 DB에 들어있는 0원 데이터를 정리하고 싶을 때 사용
+  Future<void> cleanupZeroValueTransactions() async {
+    final db = await database;
+    db.execute("DELETE FROM transactions WHERE CAST(REPLACE(token_value, ',', '') AS REAL) = 0");
+    LogService().addLog('🧹 DB 내의 0원 데이터 정리 완료');
   }
 }
