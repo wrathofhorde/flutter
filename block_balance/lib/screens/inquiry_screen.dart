@@ -76,7 +76,7 @@ class _InquiryScreenState extends State<InquiryScreen> {
           double threshold = (network == 'ETHEREUM')
               ? ethThreshold
               : polThreshold;
-          type = (value <= threshold) ? "스캠" : "입고";
+          type = (value < threshold) ? "스캠" : "입고";
         }
 
         String groupKey = "${dateStr}_${network}_${symbol}_$type";
@@ -308,9 +308,14 @@ class _InquiryScreenState extends State<InquiryScreen> {
                 ),
               ],
               rows: _summaryData.map((data) {
-                Color rowColor = data['network'] == 'ETHEREUM'
-                    ? Colors.blue.withValues(alpha: 0.05)
-                    : Colors.purple.withValues(alpha: 0.05);
+                Color rowColor = Colors.transparent;
+                if (data['network'] == 'ETHEREUM') {
+                  rowColor = Colors.blue.withValues(alpha: 0.1);
+                } else if (data['network'] == 'POLYGON') {
+                  rowColor = Colors.purple.withValues(alpha: 0.1);
+                } else if (data['network'] == 'INTERNAL') {
+                  rowColor = Colors.teal.withValues(alpha: 0.2); // Internal은 청록색 계열로 구분
+                }
 
                 Color typeColor = Colors.grey;
                 if (data['type'] == '입고') typeColor = Colors.blue[700]!;
@@ -327,7 +332,7 @@ class _InquiryScreenState extends State<InquiryScreen> {
                         style: TextStyle(
                           color: data['network'] == 'ETHEREUM'
                               ? Colors.blue[900]
-                              : Colors.purple[900],
+                              : (data['network'] == 'POLYGON'?Colors.purple[900]: Colors.green[900]),
                           fontWeight: FontWeight.bold,
                         ),
                       ),
