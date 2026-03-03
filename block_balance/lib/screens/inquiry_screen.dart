@@ -1,9 +1,10 @@
 import 'dart:io';
+import 'dart:ui'; // FontFeature를 위해 필요
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:csv/csv.dart';
+import 'package:decimal/decimal.dart'; // [추가] Decimal 패키지
 import '../services/database_helper.dart';
 
 class InquiryScreen extends StatefulWidget {
@@ -16,28 +17,43 @@ class InquiryScreen extends StatefulWidget {
 class _InquiryScreenState extends State<InquiryScreen> {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
 
-  final TextEditingController _ethThresholdController = TextEditingController(text: "0.0001");
-  final TextEditingController _polThresholdController = TextEditingController(text: "0.0001");
+  final TextEditingController _ethThresholdController = TextEditingController(
+    text: "0.0001",
+  );
+  final TextEditingController _polThresholdController = TextEditingController(
+    text: "0.0001",
+  );
 
   List<Map<String, dynamic>> _summaryData = [];
   bool _isLoading = false;
+
+  // 정밀한 계산을 위해 String에서 바로 Decimal로 변환하는 헬퍼 함수
+  Decimal _toDecimal(dynamic value) {
+    if (value == null) return Decimal.zero;
+    String cleanValue = value.toString().replaceAll(',', '').trim();
+    if (cleanValue.isEmpty || cleanValue == 'N/A') return Decimal.zero;
+    return Decimal.tryParse(cleanValue) ?? Decimal.zero;
+  }
 
   Future<void> _fetchAndSummarize() async {
     setState(() => _isLoading = true);
 
     try {
       final db = await _dbHelper.database;
-      final ethThreshold = double.tryParse(_ethThresholdController.text) ?? 0.0001;
-      final polThreshold = double.tryParse(_polThresholdController.text) ?? 0.0001;
 
-      final List<Map<String, dynamic>> walletData = await _dbHelper.getAllWallets();
+      // 임계값은 비교용이므로 double로 유지해도 무방하나 일관성을 위해 Decimal로 처리
+      final ethThreshold = _toDecimal(_ethThresholdController.text);
+      final polThreshold = _toDecimal(_polThresholdController.text);
+
+      final List<Map<String, dynamic>> walletData = await _dbHelper
+          .getAllWallets();
       final Set<String> registeredAddresses = walletData
           .map((w) => w['address'].toString().toLowerCase().trim())
           .toSet();
 
       final List<Map<String, dynamic>> rawData = db
           .select('''
-            SELECT date_time, token_value, txn_fee, network, token_symbol, from_address, to_address, tx_hash 
+            SELECT date_time, token_value, txn_fee, network, token_symbol, from_address, to_address 
             FROM transactions
           ''')
           .map((row) => Map<String, dynamic>.from(row))
@@ -46,11 +62,14 @@ class _InquiryScreenState extends State<InquiryScreen> {
       Map<String, Map<String, dynamic>> aggregatedMap = {};
 
       for (var tx in rawData) {
-        double value = double.tryParse(tx['token_value']?.toString().replaceAll(',', '') ?? '0') ?? 0.0;
-        double fee = double.tryParse(tx['txn_fee']?.toString().replaceAll(',', '') ?? '0') ?? 0.0;
+        // [수정] Decimal 연산 적용
+        Decimal value = _toDecimal(tx['token_value']);
+        Decimal fee = _toDecimal(tx['txn_fee']);
+
         String network = tx['network']?.toString().toUpperCase() ?? '';
         String symbol = tx['token_symbol'] ?? 'UNKNOWN';
-        String fromAddr = tx['from_address']?.toString().toLowerCase().trim() ?? '';
+        String fromAddr =
+            tx['from_address']?.toString().toLowerCase().trim() ?? '';
         String toAddr = tx['to_address']?.toString().toLowerCase().trim() ?? '';
 
         DateTime? fullDate = DateTime.tryParse(tx['date_time'].toString());
@@ -61,7 +80,9 @@ class _InquiryScreenState extends State<InquiryScreen> {
         if (registeredAddresses.contains(fromAddr)) {
           type = "출고";
         } else if (registeredAddresses.contains(toAddr)) {
-          double threshold = (network == 'ETHEREUM') ? ethThreshold : polThreshold;
+          Decimal threshold = (network == 'ETHEREUM')
+              ? ethThreshold
+              : polThreshold;
           type = (value < threshold) ? "스캠" : "입고";
         }
 
@@ -73,19 +94,21 @@ class _InquiryScreenState extends State<InquiryScreen> {
             'network': network,
             'coin': symbol,
             'type': type,
-            'amount': 0.0,
-            'fee': 0.0,
+            'amount': Decimal.zero, // 초기값을 Decimal.zero로 설정
+            'fee': Decimal.zero,
             'count': 0,
           };
         }
 
+        // [수정] Decimal 합산 (오차 없음)
         aggregatedMap[groupKey]!['amount'] += value;
         aggregatedMap[groupKey]!['fee'] += fee;
         aggregatedMap[groupKey]!['count'] += 1;
       }
 
       List<Map<String, dynamic>> sortedList = aggregatedMap.values.toList();
-      
+
+      // 정렬 로직 (기존과 동일)
       sortedList.sort((a, b) {
         int dateCompare = b['date'].compareTo(a['date']);
         if (dateCompare != 0) return dateCompare;
@@ -106,10 +129,9 @@ class _InquiryScreenState extends State<InquiryScreen> {
     }
   }
 
-  String formatCryptoAmount(double value) {
-    String fixedString = value.toStringAsFixed(18);
-    RegExp removeTrailingZeros = RegExp(r'([.]*0+)(?!.*\d)');
-    return fixedString.replaceAll(removeTrailingZeros, '');
+  // Decimal을 보기 좋게 포맷팅
+  String formatDecimal(Decimal value) {
+    return value.toString(); // Decimal은 자동으로 불필요한 0을 제거한 문자열을 반환합니다.
   }
 
   @override
@@ -127,8 +149,8 @@ class _InquiryScreenState extends State<InquiryScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _summaryData.isEmpty
-                    ? const Center(child: Text('데이터 집계 조회 버튼을 눌러주세요.'))
-                    : _buildDataTable(),
+                ? const Center(child: Text('데이터 집계 조회 버튼을 눌러주세요.'))
+                : _buildDataTable(),
           ),
         ],
       ),
@@ -141,9 +163,23 @@ class _InquiryScreenState extends State<InquiryScreen> {
       color: Colors.blueGrey[50],
       child: Row(
         children: [
-          SizedBox(width: 180, child: _buildInput("ETH Scam Threshold", _ethThresholdController, Colors.blue)),
+          SizedBox(
+            width: 180,
+            child: _buildInput(
+              "ETH Scam Threshold",
+              _ethThresholdController,
+              Colors.blue,
+            ),
+          ),
           const SizedBox(width: 12),
-          SizedBox(width: 180, child: _buildInput("POL Scam Threshold", _polThresholdController, Colors.purple)),
+          SizedBox(
+            width: 180,
+            child: _buildInput(
+              "POL Scam Threshold",
+              _polThresholdController,
+              Colors.purple,
+            ),
+          ),
           const SizedBox(width: 20),
           ElevatedButton.icon(
             onPressed: _isLoading ? null : _fetchAndSummarize,
@@ -160,17 +196,28 @@ class _InquiryScreenState extends State<InquiryScreen> {
     );
   }
 
-  Widget _buildInput(String label, TextEditingController controller, Color color) {
+  Widget _buildInput(
+    String label,
+    TextEditingController controller,
+    Color color,
+  ) {
     return TextField(
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold),
+        labelStyle: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+        ),
         filled: true,
         fillColor: Colors.white,
         border: const OutlineInputBorder(),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 10,
+          vertical: 12,
+        ),
       ),
     );
   }
@@ -187,24 +234,58 @@ class _InquiryScreenState extends State<InquiryScreen> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: DataTable(
-              showCheckboxColumn: false, 
+              showCheckboxColumn: false,
               columnSpacing: 24,
               headingRowColor: WidgetStateProperty.all(Colors.blueGrey[100]),
               columns: const [
-                DataColumn(label: Text('날짜', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('네트워크', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('코인', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('종류', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('건수', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('거래량 합계', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('수수료 합계', style: TextStyle(fontWeight: FontWeight.bold))),
+                DataColumn(
+                  label: Text(
+                    '날짜',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    '네트워크',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    '코인',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    '종류',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    '건수',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    '거래량 합계',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    '수수료 합계',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
               ],
               rows: _summaryData.map((data) {
                 Color rowColor = Colors.transparent;
                 if (data['network'] == 'ETHEREUM') {
                   rowColor = Colors.blue.withValues(alpha: 0.1);
-                }
-                else if (data['network'] == 'POLYGON') {
+                } else if (data['network'] == 'POLYGON') {
                   rowColor = Colors.purple.withValues(alpha: 0.1);
                 }
 
@@ -220,8 +301,12 @@ class _InquiryScreenState extends State<InquiryScreen> {
                             network: data['network'],
                             coin: data['coin'],
                             type: data['type'],
-                            ethThreshold: double.tryParse(_ethThresholdController.text) ?? 0.0001,
-                            polThreshold: double.tryParse(_polThresholdController.text) ?? 0.0001,
+                            ethThreshold: _toDecimal(
+                              _ethThresholdController.text,
+                            ),
+                            polThreshold: _toDecimal(
+                              _polThresholdController.text,
+                            ),
                           ),
                         ),
                       );
@@ -231,10 +316,15 @@ class _InquiryScreenState extends State<InquiryScreen> {
                     DataCell(Text(data['date'])),
                     DataCell(Text(data['network'])),
                     DataCell(Text(data['coin'])),
-                    DataCell(Text(data['type'], style: const TextStyle(fontWeight: FontWeight.bold))),
+                    DataCell(
+                      Text(
+                        data['type'],
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
                     DataCell(Text('${data['count']}건')),
-                    DataCell(Text(formatCryptoAmount(data['amount']))),
-                    DataCell(Text(formatCryptoAmount(data['fee']))),
+                    DataCell(Text(formatDecimal(data['amount']))),
+                    DataCell(Text(formatDecimal(data['fee']))),
                   ],
                 );
               }).toList(),
@@ -251,8 +341,8 @@ class TransactionDetailScreen extends StatefulWidget {
   final String network;
   final String coin;
   final String type;
-  final double ethThreshold;
-  final double polThreshold;
+  final Decimal ethThreshold;
+  final Decimal polThreshold;
 
   const TransactionDetailScreen({
     super.key,
@@ -265,7 +355,8 @@ class TransactionDetailScreen extends StatefulWidget {
   });
 
   @override
-  State<TransactionDetailScreen> createState() => _TransactionDetailScreenState();
+  State<TransactionDetailScreen> createState() =>
+      _TransactionDetailScreenState();
 }
 
 class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
@@ -280,31 +371,38 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
 
   Future<void> _loadData() async {
     final db = await DatabaseHelper.instance.database;
-    final List<Map<String, dynamic>> rawData = db.select('''
-      SELECT * FROM transactions 
-      WHERE substr(date_time, 1, 10) = ? 
-      AND network = ? 
-      AND token_symbol = ?
-    ''', [widget.date, widget.network, widget.coin])
-    .map((row) => Map<String, dynamic>.from(row))
-    .toList();
+    final List<Map<String, dynamic>> rawData = db
+        .select(
+          'SELECT * FROM transactions WHERE substr(date_time, 1, 10) = ? AND network = ? AND token_symbol = ?',
+          [widget.date, widget.network, widget.coin],
+        )
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList();
 
-    final List<Map<String, dynamic>> walletData = await DatabaseHelper.instance.getAllWallets();
+    final List<Map<String, dynamic>> walletData = await DatabaseHelper.instance
+        .getAllWallets();
     final Set<String> registeredAddresses = walletData
         .map((w) => w['address'].toString().toLowerCase().trim())
         .toSet();
 
     setState(() {
       _details = rawData.where((tx) {
-        String fromAddr = tx['from_address']?.toString().toLowerCase().trim() ?? '';
+        String fromAddr =
+            tx['from_address']?.toString().toLowerCase().trim() ?? '';
         String toAddr = tx['to_address']?.toString().toLowerCase().trim() ?? '';
-        double value = double.tryParse(tx['token_value']?.toString().replaceAll(',', '') ?? '0') ?? 0.0;
+
+        // 상세 페이지 필터링 시에도 Decimal 적용
+        String cleanValue =
+            tx['token_value']?.toString().replaceAll(',', '') ?? '0';
+        Decimal value = Decimal.tryParse(cleanValue) ?? Decimal.zero;
 
         String currentType = "기타";
         if (registeredAddresses.contains(fromAddr)) {
           currentType = "출고";
         } else if (registeredAddresses.contains(toAddr)) {
-          double threshold = (widget.network == 'ETHEREUM') ? widget.ethThreshold : widget.polThreshold;
+          Decimal threshold = (widget.network == 'ETHEREUM')
+              ? widget.ethThreshold
+              : widget.polThreshold;
           currentType = (value < threshold) ? "스캠" : "입고";
         }
         return currentType == widget.type;
@@ -315,17 +413,24 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
 
   Future<void> _downloadCsv() async {
     if (_details.isEmpty) return;
-
     try {
-      // 1. 헤더 설정
-      List<List<dynamic>> rows = [];
-      rows.add(["DateTime", "TokenValue", "Symbol", "TX Hash", "From", "To", "Fee", "Source"]);
+      List<List<dynamic>> rows = [
+        [
+          "DateTime",
+          "TokenValue",
+          "Symbol",
+          "TX Hash",
+          "From",
+          "To",
+          "Fee",
+          "Source",
+        ],
+      ];
 
-      // 2. 데이터 추가
       for (var tx in _details) {
         rows.add([
           tx['date_time'],
-          tx['token_value'],
+          tx['token_value'], // 원본 문자열 유지 (쉼표 등 포함)
           tx['token_symbol'],
           tx['tx_hash'],
           tx['from_address'],
@@ -335,19 +440,15 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
         ]);
       }
 
-      // 3. CSV 변환
       String csvContent = const ListToCsvConverter().convert(rows);
-
-      // 4. [수정] 실행 파일이 있는 루트 폴더 경로 획득
-      // DB 생성 시 사용했던 방식과 동일하게 설정합니다.
       final rootPath = Directory.current.path;
-      
-      // 파일명 설정 (파일명에 사용 불가능한 특수문자 제거)
-      String title = "${widget.date}_${widget.coin}_${widget.type}".replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
+      String title = "${widget.date}_${widget.coin}_${widget.type}".replaceAll(
+        RegExp(r'[<>:"/\\|?*]'),
+        '_',
+      );
       final filePath = p.join(rootPath, '$title.csv');
       final file = File(filePath);
 
-      // 5. 파일 쓰기
       await file.writeAsString(csvContent);
 
       if (mounted) {
@@ -356,10 +457,13 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
           builder: (context) => AlertDialog(
             title: const Text("CSV 저장 완료"),
             content: SelectionArea(
-              child: Text("실행 파일 폴더(루트)에 저장되었습니다:\n\n$filePath")
+              child: Text("실행 파일 폴더에 저장되었습니다:\n\n$filePath"),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text("확인"))
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("확인"),
+              ),
             ],
           ),
         );
@@ -372,14 +476,12 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
       }
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
-    String title = "${widget.date} 상세 (${widget.coin} - ${widget.type})";
-
     return Scaffold(
       appBar: AppBar(
-        title: Text(title),
+        title: Text("${widget.date} 상세 (${widget.coin} - ${widget.type})"),
         backgroundColor: Colors.blueGrey[800],
         foregroundColor: Colors.white,
         actions: [
@@ -393,84 +495,138 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _details.isEmpty
-              ? const Center(child: Text("내역이 없습니다."))
-              : ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _details.length,
-                  separatorBuilder: (context, index) => const Divider(height: 24),
-                  itemBuilder: (context, index) {
-                    final tx = _details[index];
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+          ? const Center(child: Text("내역이 없습니다."))
+          : ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: _details.length,
+              separatorBuilder: (context, index) => const Divider(height: 24),
+              itemBuilder: (context, index) {
+                final tx = _details[index];
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(tx['date_time'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.blueGrey)),
-                            
-                            // [수정된 수량 표시부] 
-                            Row(
-                              children: [
-                                SelectableText(
-                                  "${tx['token_value']}", 
-                                  style: const TextStyle(
-                                    color: Colors.blueAccent, 
-                                    fontWeight: FontWeight.bold, 
-                                    fontSize: 15,
-                                    fontFeatures: [FontFeature.tabularFigures()],
-                                  )
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  widget.coin, 
-                                  style: const TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold, fontSize: 15)
-                                ),
-                              ],
-                            ),
-                          ],
+                        Text(
+                          tx['date_time'] ?? '',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: Colors.blueGrey,
+                          ),
                         ),
-                        const SizedBox(height: 8),
-                        _buildInlineInfo("TX HASH", tx['tx_hash'] ?? 'N/A'),
-                        const SizedBox(height: 4),
                         Row(
                           children: [
-                            Expanded(child: _buildInlineInfo("FROM", tx['from_address'] ?? 'unknown')),
-                            const SizedBox(width: 8),
-                            Expanded(child: _buildInlineInfo("TO", tx['to_address'] ?? 'unknown')),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                const Text("Fee: ", style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
-                                SelectableText("${tx['txn_fee']} ${widget.network}", style: const TextStyle(fontSize: 11, color: Colors.blueGrey)),
-                              ],
+                            SelectableText(
+                              "${tx['token_value']}", // 화면에는 원본 값 표시
+                              style: const TextStyle(
+                                color: Colors.blueAccent,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                                fontFeatures: [FontFeature.tabularFigures()],
+                              ),
                             ),
-                            if(tx['source_file'] != null) Text(tx['source_file'], style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                            const SizedBox(width: 4),
+                            Text(
+                              widget.coin,
+                              style: const TextStyle(
+                                color: Colors.blueAccent,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
                           ],
                         ),
                       ],
-                    );
-                  },
-                ),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildInlineInfo("TX HASH", tx['tx_hash'] ?? 'N/A'),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildInlineInfo(
+                            "FROM",
+                            tx['from_address'] ?? 'unknown',
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _buildInlineInfo(
+                            "TO",
+                            tx['to_address'] ?? 'unknown',
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Text(
+                              "Fee: ",
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SelectableText(
+                              "${tx['txn_fee']} ${widget.network}",
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Colors.blueGrey,
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (tx['source_file'] != null)
+                          Text(
+                            tx['source_file'],
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                );
+              },
+            ),
     );
   }
 
   Widget _buildInlineInfo(String label, String value) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: Colors.grey[50], borderRadius: BorderRadius.circular(4), border: Border.all(color: Colors.grey[200]!)),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text("$label: ", style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+          Text(
+            "$label: ",
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: Colors.blueGrey,
+            ),
+          ),
           Expanded(
             child: SelectableText(
               value,
-              style: const TextStyle(fontSize: 11, fontFeatures: [FontFeature.tabularFigures()], overflow: TextOverflow.ellipsis),
+              style: const TextStyle(
+                fontSize: 11,
+                fontFeatures: [FontFeature.tabularFigures()],
+                overflow: TextOverflow.ellipsis,
+              ),
               maxLines: 1,
             ),
           ),
