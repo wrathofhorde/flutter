@@ -1,10 +1,6 @@
-import 'dart:io';
-import 'dart:ui'; // FontFeature를 위해 필요
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:path/path.dart' as p;
-import 'package:csv/csv.dart';
-import 'package:decimal/decimal.dart'; // [추가] Decimal 패키지
+import 'package:decimal/decimal.dart';
 import '../services/database_helper.dart';
 
 class InquiryScreen extends StatefulWidget {
@@ -27,7 +23,6 @@ class _InquiryScreenState extends State<InquiryScreen> {
   List<Map<String, dynamic>> _summaryData = [];
   bool _isLoading = false;
 
-  // 정밀한 계산을 위해 String에서 바로 Decimal로 변환하는 헬퍼 함수
   Decimal _toDecimal(dynamic value) {
     if (value == null) return Decimal.zero;
     String cleanValue = value.toString().replaceAll(',', '').trim();
@@ -75,7 +70,7 @@ class _InquiryScreenState extends State<InquiryScreen> {
         if (fullDate == null) continue;
         String dateStr = DateFormat('yyyy-MM-dd').format(fullDate);
 
-        // 1. 유형 분류 (입고/출고/스캠)
+        // 1. 유형 분류
         String type = "기타";
         if (registeredAddresses.contains(fromAddr)) {
           type = "출고";
@@ -86,11 +81,11 @@ class _InquiryScreenState extends State<InquiryScreen> {
           type = (value < threshold) ? "스캠" : "입고";
         }
 
-        // 2. [수정 로직] 네이티브 토큰(ETH, POL) 입고 시 수수료 합산
-        // 수수료 항목은 별도로 유지하되, 거래량(amount)에만 수수료를 더해줌
+        // 2. [조건부 합산 로직]
+        // 오직 '입고' 유형이면서 ETH/POL 인 경우에만 수수료 합산
+        // '스캠'이나 '출고' 등은 수수료를 합산하지 않음 (기존 방식)
         Decimal calculatedValue = value;
-        if ((type == "입고" || type == "스캠") &&
-            (symbol == "ETH" || symbol == "POL")) {
+        if (type == "입고" && (symbol == "ETH" || symbol == "POL")) {
           calculatedValue = value + fee;
         }
 
@@ -114,7 +109,6 @@ class _InquiryScreenState extends State<InquiryScreen> {
       }
 
       List<Map<String, dynamic>> sortedList = aggregatedMap.values.toList();
-
       sortedList.sort((a, b) {
         int dateCompare = b['date'].compareTo(a['date']);
         if (dateCompare != 0) return dateCompare;
@@ -143,7 +137,7 @@ class _InquiryScreenState extends State<InquiryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('거래 내역 집계 분석 (수수료 포함 합산)'),
+        title: const Text('거래 집계 (ETH/POL 입고 시 수수료 합산)'),
         backgroundColor: Colors.blueGrey[900],
         foregroundColor: Colors.white,
       ),
@@ -154,7 +148,7 @@ class _InquiryScreenState extends State<InquiryScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _summaryData.isEmpty
-                ? const Center(child: Text('데이터 집계 조회 버튼을 눌러주세요.'))
+                ? const Center(child: Text('조회 결과가 없습니다.'))
                 : _buildDataTable(),
           ),
         ],
@@ -420,72 +414,6 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
     });
   }
 
-  Future<void> _downloadCsv() async {
-    if (_details.isEmpty) return;
-    try {
-      List<List<dynamic>> rows = [
-        [
-          "DateTime",
-          "TokenValue",
-          "Symbol",
-          "TX Hash",
-          "From",
-          "To",
-          "Fee",
-          "Source",
-        ],
-      ];
-
-      for (var tx in _details) {
-        rows.add([
-          tx['date_time'],
-          tx['token_value'],
-          tx['token_symbol'],
-          tx['tx_hash'],
-          tx['from_address'],
-          tx['to_address'],
-          tx['txn_fee'],
-          tx['source_file'] ?? "",
-        ]);
-      }
-
-      String csvContent = const ListToCsvConverter().convert(rows);
-      final rootPath = Directory.current.path;
-      String title = "${widget.date}_${widget.coin}_${widget.type}".replaceAll(
-        RegExp(r'[<>:"/\\|?*]'),
-        '_',
-      );
-      final filePath = p.join(rootPath, '$title.csv');
-      final file = File(filePath);
-
-      await file.writeAsString(csvContent);
-
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text("CSV 저장 완료"),
-            content: SelectionArea(
-              child: Text("실행 파일 폴더에 저장되었습니다:\n\n$filePath"),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("확인"),
-              ),
-            ],
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("다운로드 실패: $e"), backgroundColor: Colors.red),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -493,13 +421,6 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
         title: Text("${widget.date} 상세 (${widget.coin} - ${widget.type})"),
         backgroundColor: Colors.blueGrey[800],
         foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            onPressed: _isLoading ? null : _downloadCsv,
-            icon: const Icon(Icons.file_download),
-            tooltip: "CSV 다운로드",
-          ),
-        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -512,13 +433,14 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
               itemBuilder: (context, index) {
                 final tx = _details[index];
 
-                // 상세 화면 리스트 표시용 값 계산 (ETH/POL 입고 시 수수료 합산 표시)
+                // 상세 화면 표시 로직: 메인 화면 집계 로직과 동일하게 적용
                 Decimal value = _toDecimal(tx['token_value']);
                 Decimal fee = _toDecimal(tx['txn_fee']);
                 String symbol = widget.coin.toUpperCase();
 
                 String displayValue = tx['token_value'].toString();
-                if ((widget.type == "입고" || widget.type == "스캠") &&
+                // '입고'일 때만 수수료 합산 표시
+                if (widget.type == "입고" &&
                     (symbol == "ETH" || symbol == "POL")) {
                   displayValue = (value + fee).toString();
                 }
