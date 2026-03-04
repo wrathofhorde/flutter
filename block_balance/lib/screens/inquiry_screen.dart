@@ -1,5 +1,5 @@
 import 'dart:io';
-// FontFeature를 위해 필요
+import 'dart:ui'; // FontFeature를 위해 필요
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:path/path.dart' as p;
@@ -41,7 +41,6 @@ class _InquiryScreenState extends State<InquiryScreen> {
     try {
       final db = await _dbHelper.database;
 
-      // 임계값은 비교용이므로 double로 유지해도 무방하나 일관성을 위해 Decimal로 처리
       final ethThreshold = _toDecimal(_ethThresholdController.text);
       final polThreshold = _toDecimal(_polThresholdController.text);
 
@@ -62,12 +61,12 @@ class _InquiryScreenState extends State<InquiryScreen> {
       Map<String, Map<String, dynamic>> aggregatedMap = {};
 
       for (var tx in rawData) {
-        // [수정] Decimal 연산 적용
         Decimal value = _toDecimal(tx['token_value']);
         Decimal fee = _toDecimal(tx['txn_fee']);
 
         String network = tx['network']?.toString().toUpperCase() ?? '';
-        String symbol = tx['token_symbol'] ?? 'UNKNOWN';
+        String symbol =
+            tx['token_symbol']?.toString().toUpperCase() ?? 'UNKNOWN';
         String fromAddr =
             tx['from_address']?.toString().toLowerCase().trim() ?? '';
         String toAddr = tx['to_address']?.toString().toLowerCase().trim() ?? '';
@@ -76,6 +75,7 @@ class _InquiryScreenState extends State<InquiryScreen> {
         if (fullDate == null) continue;
         String dateStr = DateFormat('yyyy-MM-dd').format(fullDate);
 
+        // 1. 유형 분류 (입고/출고/스캠)
         String type = "기타";
         if (registeredAddresses.contains(fromAddr)) {
           type = "출고";
@@ -86,6 +86,14 @@ class _InquiryScreenState extends State<InquiryScreen> {
           type = (value < threshold) ? "스캠" : "입고";
         }
 
+        // 2. [수정 로직] 네이티브 토큰(ETH, POL) 입고 시 수수료 합산
+        // 수수료 항목은 별도로 유지하되, 거래량(amount)에만 수수료를 더해줌
+        Decimal calculatedValue = value;
+        if ((type == "입고" || type == "스캠") &&
+            (symbol == "ETH" || symbol == "POL")) {
+          calculatedValue = value + fee;
+        }
+
         String groupKey = "${dateStr}_${network}_${symbol}_$type";
 
         if (!aggregatedMap.containsKey(groupKey)) {
@@ -94,21 +102,19 @@ class _InquiryScreenState extends State<InquiryScreen> {
             'network': network,
             'coin': symbol,
             'type': type,
-            'amount': Decimal.zero, // 초기값을 Decimal.zero로 설정
+            'amount': Decimal.zero,
             'fee': Decimal.zero,
             'count': 0,
           };
         }
 
-        // [수정] Decimal 합산 (오차 없음)
-        aggregatedMap[groupKey]!['amount'] += value;
+        aggregatedMap[groupKey]!['amount'] += calculatedValue;
         aggregatedMap[groupKey]!['fee'] += fee;
         aggregatedMap[groupKey]!['count'] += 1;
       }
 
       List<Map<String, dynamic>> sortedList = aggregatedMap.values.toList();
 
-      // 정렬 로직 (기존과 동일)
       sortedList.sort((a, b) {
         int dateCompare = b['date'].compareTo(a['date']);
         if (dateCompare != 0) return dateCompare;
@@ -129,16 +135,15 @@ class _InquiryScreenState extends State<InquiryScreen> {
     }
   }
 
-  // Decimal을 보기 좋게 포맷팅
   String formatDecimal(Decimal value) {
-    return value.toString(); // Decimal은 자동으로 불필요한 0을 제거한 문자열을 반환합니다.
+    return value.toString();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('거래 내역 집계 분석'),
+        title: const Text('거래 내역 집계 분석 (수수료 포함 합산)'),
         backgroundColor: Colors.blueGrey[900],
         foregroundColor: Colors.white,
       ),
@@ -369,6 +374,13 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
     _loadData();
   }
 
+  Decimal _toDecimal(dynamic value) {
+    if (value == null) return Decimal.zero;
+    String cleanValue = value.toString().replaceAll(',', '').trim();
+    if (cleanValue.isEmpty || cleanValue == 'N/A') return Decimal.zero;
+    return Decimal.tryParse(cleanValue) ?? Decimal.zero;
+  }
+
   Future<void> _loadData() async {
     final db = await DatabaseHelper.instance.database;
     final List<Map<String, dynamic>> rawData = db
@@ -391,10 +403,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
             tx['from_address']?.toString().toLowerCase().trim() ?? '';
         String toAddr = tx['to_address']?.toString().toLowerCase().trim() ?? '';
 
-        // 상세 페이지 필터링 시에도 Decimal 적용
-        String cleanValue =
-            tx['token_value']?.toString().replaceAll(',', '') ?? '0';
-        Decimal value = Decimal.tryParse(cleanValue) ?? Decimal.zero;
+        Decimal value = _toDecimal(tx['token_value']);
 
         String currentType = "기타";
         if (registeredAddresses.contains(fromAddr)) {
@@ -430,7 +439,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
       for (var tx in _details) {
         rows.add([
           tx['date_time'],
-          tx['token_value'], // 원본 문자열 유지 (쉼표 등 포함)
+          tx['token_value'],
           tx['token_symbol'],
           tx['tx_hash'],
           tx['from_address'],
@@ -502,6 +511,18 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
               separatorBuilder: (context, index) => const Divider(height: 24),
               itemBuilder: (context, index) {
                 final tx = _details[index];
+
+                // 상세 화면 리스트 표시용 값 계산 (ETH/POL 입고 시 수수료 합산 표시)
+                Decimal value = _toDecimal(tx['token_value']);
+                Decimal fee = _toDecimal(tx['txn_fee']);
+                String symbol = widget.coin.toUpperCase();
+
+                String displayValue = tx['token_value'].toString();
+                if ((widget.type == "입고" || widget.type == "스캠") &&
+                    (symbol == "ETH" || symbol == "POL")) {
+                  displayValue = (value + fee).toString();
+                }
+
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -519,7 +540,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                         Row(
                           children: [
                             SelectableText(
-                              "${tx['token_value']}", // 화면에는 원본 값 표시
+                              displayValue,
                               style: const TextStyle(
                                 color: Colors.blueAccent,
                                 fontWeight: FontWeight.bold,
