@@ -1,6 +1,10 @@
+import 'dart:io';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:csv/csv.dart';
 import 'package:decimal/decimal.dart';
+import 'package:path_provider/path_provider.dart';
 import '../services/database_helper.dart';
 
 class InquiryScreen extends StatefulWidget {
@@ -35,7 +39,6 @@ class _InquiryScreenState extends State<InquiryScreen> {
 
     try {
       final db = await _dbHelper.database;
-
       final ethThreshold = _toDecimal(_ethThresholdController.text);
       final polThreshold = _toDecimal(_polThresholdController.text);
 
@@ -58,7 +61,6 @@ class _InquiryScreenState extends State<InquiryScreen> {
       for (var tx in rawData) {
         Decimal value = _toDecimal(tx['token_value']);
         Decimal fee = _toDecimal(tx['txn_fee']);
-
         String network = tx['network']?.toString().toUpperCase() ?? '';
         String symbol =
             tx['token_symbol']?.toString().toUpperCase() ?? 'UNKNOWN';
@@ -70,7 +72,6 @@ class _InquiryScreenState extends State<InquiryScreen> {
         if (fullDate == null) continue;
         String dateStr = DateFormat('yyyy-MM-dd').format(fullDate);
 
-        // 1. 유형 분류
         String type = "기타";
         if (registeredAddresses.contains(fromAddr)) {
           type = "출고";
@@ -81,9 +82,6 @@ class _InquiryScreenState extends State<InquiryScreen> {
           type = (value < threshold) ? "스캠" : "입고";
         }
 
-        // 2. [조건부 합산 로직]
-        // 오직 '입고' 유형이면서 ETH/POL 인 경우에만 수수료 합산
-        // '스캠'이나 '출고' 등은 수수료를 합산하지 않음 (기존 방식)
         Decimal calculatedValue = value;
         if (type == "입고" && (symbol == "ETH" || symbol == "POL")) {
           calculatedValue = value + fee;
@@ -110,18 +108,14 @@ class _InquiryScreenState extends State<InquiryScreen> {
 
       List<Map<String, dynamic>> sortedList = aggregatedMap.values.toList();
       sortedList.sort((a, b) {
-        int dateCompare = b['date'].compareTo(a['date']);
-        if (dateCompare != 0) return dateCompare;
-        int networkCompare = a['network'].compareTo(b['network']);
-        if (networkCompare != 0) return networkCompare;
-        int coinCompare = a['coin'].compareTo(b['coin']);
-        if (coinCompare != 0) return coinCompare;
-        return a['type'].compareTo(b['type']);
+        int dateComp = b['date'].compareTo(a['date']);
+        if (dateComp != 0) return dateComp;
+        int netComp = a['network'].compareTo(b['network']);
+        if (netComp != 0) return netComp;
+        return a['coin'].compareTo(b['coin']);
       });
 
-      setState(() {
-        _summaryData = sortedList;
-      });
+      setState(() => _summaryData = sortedList);
     } catch (e) {
       debugPrint("데이터 집계 오류: $e");
     } finally {
@@ -129,15 +123,11 @@ class _InquiryScreenState extends State<InquiryScreen> {
     }
   }
 
-  String formatDecimal(Decimal value) {
-    return value.toString();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('거래 집계 (ETH/POL 입고 시 수수료 합산)'),
+        title: const Text('거래 집계 (네트워크/코인 정렬 및 배경색)'),
         backgroundColor: Colors.blueGrey[900],
         foregroundColor: Colors.white,
       ),
@@ -213,121 +203,109 @@ class _InquiryScreenState extends State<InquiryScreen> {
         filled: true,
         fillColor: Colors.white,
         border: const OutlineInputBorder(),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 10,
-          vertical: 12,
-        ),
       ),
     );
   }
 
   Widget _buildDataTable() {
     return SelectionArea(
-      child: SizedBox(
-        width: double.infinity,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey[300]!),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: DataTable(
-              showCheckboxColumn: false,
-              columnSpacing: 24,
-              headingRowColor: WidgetStateProperty.all(Colors.blueGrey[100]),
-              columns: const [
-                DataColumn(
-                  label: Text(
-                    '날짜',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey[300]!),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: DataTable(
+            showCheckboxColumn: false,
+            columnSpacing: 24,
+            headingRowColor: WidgetStateProperty.all(Colors.blueGrey[100]),
+            columns: const [
+              DataColumn(
+                label: Text(
+                  '날짜',
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-                DataColumn(
-                  label: Text(
-                    '네트워크',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
+              ),
+              DataColumn(
+                label: Text(
+                  '네트워크',
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-                DataColumn(
-                  label: Text(
-                    '코인',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
+              ),
+              DataColumn(
+                label: Text(
+                  '코인',
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-                DataColumn(
-                  label: Text(
-                    '종류',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
+              ),
+              DataColumn(
+                label: Text(
+                  '종류',
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-                DataColumn(
-                  label: Text(
-                    '건수',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
+              ),
+              DataColumn(
+                label: Text(
+                  '건수',
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-                DataColumn(
-                  label: Text(
-                    '거래량 합계',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
+              ),
+              DataColumn(
+                label: Text(
+                  '거래량 합계',
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-                DataColumn(
-                  label: Text(
-                    '수수료 합계',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
+              ),
+              DataColumn(
+                label: Text(
+                  '수수료 합계',
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-              ],
-              rows: _summaryData.map((data) {
-                Color rowColor = Colors.transparent;
-                if (data['network'] == 'ETHEREUM') {
-                  rowColor = Colors.blue.withValues(alpha: 0.1);
-                } else if (data['network'] == 'POLYGON') {
-                  rowColor = Colors.purple.withValues(alpha: 0.1);
-                }
+              ),
+            ],
+            rows: _summaryData.map((data) {
+              Color rowColor = Colors.transparent;
+              if (data['network'] == 'ETHEREUM') {
+                rowColor = Colors.blue.withValues(alpha: 0.05);
+              } else if (data['network'] == 'POLYGON') {
+                rowColor = Colors.purple.withValues(alpha: 0.05);
+              }
 
-                return DataRow(
-                  color: WidgetStateProperty.all(rowColor),
-                  onSelectChanged: (selected) {
-                    if (selected == true) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => TransactionDetailScreen(
-                            date: data['date'],
-                            network: data['network'],
-                            coin: data['coin'],
-                            type: data['type'],
-                            ethThreshold: _toDecimal(
-                              _ethThresholdController.text,
-                            ),
-                            polThreshold: _toDecimal(
-                              _polThresholdController.text,
-                            ),
-                          ),
-                        ),
-                      );
-                    }
-                  },
-                  cells: [
-                    DataCell(Text(data['date'])),
-                    DataCell(Text(data['network'])),
-                    DataCell(Text(data['coin'])),
-                    DataCell(
-                      Text(
-                        data['type'],
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+              return DataRow(
+                color: WidgetStateProperty.all(rowColor),
+                onSelectChanged: (_) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => TransactionDetailScreen(
+                        date: data['date'],
+                        network: data['network'],
+                        coin: data['coin'],
+                        type: data['type'],
+                        ethThreshold: _toDecimal(_ethThresholdController.text),
+                        polThreshold: _toDecimal(_polThresholdController.text),
                       ),
                     ),
-                    DataCell(Text('${data['count']}건')),
-                    DataCell(Text(formatDecimal(data['amount']))),
-                    DataCell(Text(formatDecimal(data['fee']))),
-                  ],
-                );
-              }).toList(),
-            ),
+                  );
+                },
+                cells: [
+                  DataCell(Text(data['date'])),
+                  DataCell(Text(data['network'])),
+                  DataCell(Text(data['coin'])),
+                  DataCell(
+                    Text(
+                      data['type'],
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  DataCell(Text('${data['count']}건')),
+                  DataCell(Text(data['amount'].toString())),
+                  DataCell(Text(data['fee'].toString())),
+                ],
+              );
+            }).toList(),
           ),
         ),
       ),
@@ -371,7 +349,6 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
   Decimal _toDecimal(dynamic value) {
     if (value == null) return Decimal.zero;
     String cleanValue = value.toString().replaceAll(',', '').trim();
-    if (cleanValue.isEmpty || cleanValue == 'N/A') return Decimal.zero;
     return Decimal.tryParse(cleanValue) ?? Decimal.zero;
   }
 
@@ -396,7 +373,6 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
         String fromAddr =
             tx['from_address']?.toString().toLowerCase().trim() ?? '';
         String toAddr = tx['to_address']?.toString().toLowerCase().trim() ?? '';
-
         Decimal value = _toDecimal(tx['token_value']);
 
         String currentType = "기타";
@@ -414,6 +390,119 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
     });
   }
 
+  // --- CSV 다운로드 및 'csv_download' 전용 폴더 저장 로직 ---
+  Future<void> _downloadCSV() async {
+    try {
+      List<List<dynamic>> rows = [];
+      rows.add([
+        "DateTime",
+        "Value",
+        "Symbol",
+        "Type",
+        "TX Fee",
+        "TX Hash",
+        "From",
+        "To",
+        "Source",
+      ]);
+
+      for (var tx in _details) {
+        Decimal value = _toDecimal(tx['token_value']);
+        Decimal fee = _toDecimal(tx['txn_fee']);
+        String displayValue = tx['token_value'].toString();
+
+        if (widget.type == "입고" &&
+            (widget.coin == "ETH" || widget.coin == "POL")) {
+          displayValue = (value + fee).toString();
+        }
+
+        rows.add([
+          tx['date_time'],
+          displayValue,
+          widget.coin,
+          widget.type,
+          tx['txn_fee'],
+          tx['tx_hash'],
+          tx['from_address'],
+          tx['to_address'],
+          tx['source_file'],
+        ]);
+      }
+
+      String csvData = const ListToCsvConverter().convert(rows);
+
+      // 1. 기본 경로 가져오기 (문서 폴더)
+      Directory baseDir = await getApplicationDocumentsDirectory();
+
+      // 2. 'csv_download' 전용 폴더 생성
+      String customPath = "${baseDir.path}/csv_download";
+      Directory customDir = Directory(customPath);
+      if (!await customDir.exists()) {
+        await customDir.create(recursive: true);
+      }
+
+      final String fileName =
+          "${widget.date}_${widget.coin}_${widget.type}.csv";
+      final String filePath = "$customPath/$fileName";
+      final File file = File(filePath);
+      await file.writeAsString(csvData);
+
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.folder_zip, color: Colors.blueAccent),
+                SizedBox(width: 10),
+                Text("CSV 저장 완료"),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "전용 폴더에 파일이 저장되었습니다.",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  "저장 경로 (csv_download):",
+                  style: TextStyle(fontSize: 12, color: Colors.blueGrey),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.blueGrey[50],
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: SelectableText(
+                    filePath,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Colors.indigo,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("확인"),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint("CSV 다운로드 오류: $e");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -421,6 +510,13 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
         title: Text("${widget.date} 상세 (${widget.coin} - ${widget.type})"),
         backgroundColor: Colors.blueGrey[800],
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.download),
+            tooltip: "CSV로 다운로드",
+            onPressed: _details.isEmpty ? null : _downloadCSV,
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -432,16 +528,12 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
               separatorBuilder: (context, index) => const Divider(height: 24),
               itemBuilder: (context, index) {
                 final tx = _details[index];
-
-                // 상세 화면 표시 로직: 메인 화면 집계 로직과 동일하게 적용
                 Decimal value = _toDecimal(tx['token_value']);
                 Decimal fee = _toDecimal(tx['txn_fee']);
-                String symbol = widget.coin.toUpperCase();
-
                 String displayValue = tx['token_value'].toString();
-                // '입고'일 때만 수수료 합산 표시
+
                 if (widget.type == "입고" &&
-                    (symbol == "ETH" || symbol == "POL")) {
+                    (widget.coin == "ETH" || widget.coin == "POL")) {
                   displayValue = (value + fee).toString();
                 }
 
@@ -455,31 +547,17 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                           tx['date_time'] ?? '',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontSize: 13,
                             color: Colors.blueGrey,
+                            fontSize: 13,
                           ),
                         ),
-                        Row(
-                          children: [
-                            SelectableText(
-                              displayValue,
-                              style: const TextStyle(
-                                color: Colors.blueAccent,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                                fontFeatures: [FontFeature.tabularFigures()],
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              widget.coin,
-                              style: const TextStyle(
-                                color: Colors.blueAccent,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
-                            ),
-                          ],
+                        Text(
+                          "$displayValue ${widget.coin}",
+                          style: const TextStyle(
+                            color: Colors.blueAccent,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
                         ),
                       ],
                     ),
@@ -507,24 +585,12 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            const Text(
-                              "Fee: ",
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            SelectableText(
-                              "${tx['txn_fee']} ${widget.network}",
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: Colors.blueGrey,
-                              ),
-                            ),
-                          ],
+                        Text(
+                          "Fee: ${tx['txn_fee']} ${widget.network}",
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey,
+                          ),
                         ),
                         if (tx['source_file'] != null)
                           Text(
@@ -552,7 +618,6 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
         border: Border.all(color: Colors.grey[200]!),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             "$label: ",
@@ -568,7 +633,6 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
               style: const TextStyle(
                 fontSize: 11,
                 fontFeatures: [FontFeature.tabularFigures()],
-                overflow: TextOverflow.ellipsis,
               ),
               maxLines: 1,
             ),
