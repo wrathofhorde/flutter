@@ -1,3 +1,5 @@
+import 'package:asset_tracker/ui/screens/asset_list_screen.dart';
+import 'package:asset_tracker/ui/screens/dashboard_screen.dart';
 import 'package:flutter/material.dart';
 
 class MainLayout extends StatefulWidget {
@@ -12,8 +14,8 @@ class _MainLayoutState extends State<MainLayout> {
 
   // 나중에 각각 별도 파일로 분리된 Screen 위젯으로 교체하세요.
   final List<Widget> _pages = [
-    const Center(child: Text('대시보드 화면')),
-    const Center(child: Text('자산관리 화면')),
+    const DashboardScreen(),
+    const AssetListScreen(),
     const Center(child: Text('월별기록 화면')),
     const Center(child: Text('설정 화면')),
   ];
